@@ -40,7 +40,6 @@ public class BoidsModel {
         	V2d vel = new V2d(Math.random() * maxSpeed/2 - maxSpeed/4, Math.random() * maxSpeed/2 - maxSpeed/4);
         	boids.add(new Boid(pos, vel));
         }
-
     }
     
     public synchronized List<Boid> getBoids(){
