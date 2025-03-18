@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class BoidsSimulator {
 
@@ -14,11 +11,12 @@ public class BoidsSimulator {
     private Optional<BoidsView> view;
     private List<Worker> workers = new ArrayList<>();
 
-    private static final int FRAMERATE = 100;
+    private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES + 2;
-    private Barrier barrier = new BarrierImpl();
+    private final int N_WORKERS = 50;
+    private CyclicBarrier velocityBarrier = new CyclicBarrier(N_WORKERS);
+    private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -46,7 +44,7 @@ public class BoidsSimulator {
         int i = 0;
         for (List<Boid> partition : partitions) {
             i++;
-            workers.add(new Worker("W" + i, partition, model, barrier));
+            workers.add(new Worker("W" + i, partition, model, velocityBarrier, positionBarrier));
         }
     }
 
