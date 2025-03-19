@@ -14,20 +14,15 @@ public class BoidsSimulator {
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = 50;
+    private final int N_WORKERS = 10;
     private CyclicBarrier velocityBarrier = new CyclicBarrier(N_WORKERS);
     private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
+    private boolean workersAreAlive = false;
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
         initWorkers();
-    }
-
-    private void startWorkers() {
-        for(Worker worker : workers) {
-            worker.start();
-        }
     }
 
     private void initWorkers() {
@@ -54,25 +49,57 @@ public class BoidsSimulator {
 
     public void runSimulation() {
         startWorkers();
-    	while (true) {
+        while (true) {
             var t0 = System.currentTimeMillis();
-
-    		if (view.isPresent()) {
-            	view.get().update(framerate);
-            	var t1 = System.currentTimeMillis();
-                var dtElapsed = t1 - t0;
-                var framratePeriod = 1000/FRAMERATE;
-                
-                if (dtElapsed < framratePeriod) {		
-                	try {
-                		Thread.sleep(framratePeriod - dtElapsed);
-                	} catch (Exception ex) {}
-                	framerate = FRAMERATE;
+            if (view.isPresent()) {
+                if (view.get().isRunning()) {
+                    activeWorkers();
+                    view.get().update(framerate);
                 } else {
-                	framerate = (int) (1000/dtElapsed);
+                    pauseWorkers();
                 }
-    		}
-            
-    	}
+
+                var t1 = System.currentTimeMillis();
+                var dtElapsed = t1 - t0;
+                var framratePeriod = 1000 / FRAMERATE;
+
+                if (dtElapsed < framratePeriod) {
+                    try {
+                        Thread.sleep(framratePeriod - dtElapsed);
+                    } catch (Exception ex) {
+                    }
+                    framerate = FRAMERATE;
+                } else {
+                    framerate = (int) (1000 / dtElapsed);
+                }
+            }
+        }
     }
+
+    private void startWorkers() {
+        for (Worker worker : workers) {
+            worker.start();
+        }
+    }
+
+    private void pauseWorkers() {
+        if (workersAreAlive) {
+            System.out.println("stop workers");
+            for (Worker worker : workers) {
+                worker.pause();
+            }
+        }
+        workersAreAlive = false;
+    }
+
+    private void activeWorkers() {
+        if (!workersAreAlive) {
+            System.out.println("start workers");
+            for (Worker worker : workers) {
+                worker.play();
+            }
+            workersAreAlive = true;
+        }
+    }
+
 }

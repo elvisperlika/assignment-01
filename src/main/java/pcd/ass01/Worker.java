@@ -10,6 +10,7 @@ public class Worker extends Thread {
     private final BoidsModel model;
     private final CyclicBarrier velocityBarrier;
     private final CyclicBarrier positionBarrier;
+    private boolean running = true;
 
     public Worker(String name, List<Boid> boidList, BoidsModel model, CyclicBarrier barrier, CyclicBarrier positionBarrier) {
         super(name);
@@ -21,29 +22,30 @@ public class Worker extends Thread {
 
     public void run() {
         while (true) {
-            try {
-                boidList.forEach(boid -> boid.updateVelocity(model));
-                boidList.forEach(boid -> boid.normalizeVelocity(model));
-                velocityBarrier.await();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (BrokenBarrierException e) {
-                throw new RuntimeException(e);
-            }
-            if (velocityBarrier.isBroken()) {
-                velocityBarrier.reset();
-            }
+            if (running) {
+                log(getName() + " - running ");
+                try {
+                    boidList.forEach(boid -> boid.updateVelocity(model));
+                    boidList.forEach(boid -> boid.normalizeVelocity(model));
+                    velocityBarrier.await();
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    throw new RuntimeException(e);
+                }
+                if (velocityBarrier.isBroken()) {
+                    velocityBarrier.reset();
+                }
 
-            try {
-                boidList.forEach(boid -> boid.updatePos(model));
-                positionBarrier.await();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } catch (BrokenBarrierException e) {
-                throw new RuntimeException(e);
-            }
-            if (positionBarrier.isBroken()) {
-                positionBarrier.reset();
+                try {
+                    boidList.forEach(boid -> boid.updatePos(model));
+                    positionBarrier.await();
+                } catch (InterruptedException | BrokenBarrierException e) {
+                    throw new RuntimeException(e);
+                }
+                if (positionBarrier.isBroken()) {
+                    positionBarrier.reset();
+                }
+            } else {
+                log(getName() + " - stopped ");
             }
         }
     }
@@ -53,4 +55,13 @@ public class Worker extends Thread {
             System.out.println("[" + this + "] " + msg);
         }
     }
+
+    public void play() {
+        running = true;
+    }
+
+    public void pause() {
+        running = false;
+    }
+
 }
