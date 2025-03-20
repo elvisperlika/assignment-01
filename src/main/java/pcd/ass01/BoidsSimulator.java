@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Semaphore;
 
 public class BoidsSimulator {
 
@@ -14,9 +15,10 @@ public class BoidsSimulator {
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = 10;
+    private final int N_WORKERS = 9;
     private CyclicBarrier velocityBarrier = new CyclicBarrier(N_WORKERS);
     private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
+    private Semaphore pauseSemaphore = new Semaphore(1);
     private boolean workersAreAlive = false;
 
     public BoidsSimulator(BoidsModel model) {
@@ -27,10 +29,6 @@ public class BoidsSimulator {
 
     private void initWorkers() {
         int boidsForWorker = model.getBoids().size() / N_WORKERS;
-        System.out.println("bois " + model.getBoids().size());
-        System.out.println("workers " + N_WORKERS);
-        System.out.println("bFR " + boidsForWorker);
-
         List<List<Boid>> partitions = new ArrayList<>();
         for (int i=0; i< model.getBoids().size(); i += boidsForWorker) {
             partitions.add(model.getBoids().subList(i, Math.min(i + boidsForWorker, model.getBoids().size())));
@@ -39,7 +37,7 @@ public class BoidsSimulator {
         int i = 0;
         for (List<Boid> partition : partitions) {
             i++;
-            workers.add(new Worker("W" + i, partition, model, velocityBarrier, positionBarrier));
+            workers.add(new Worker("W" + i, partition, model, velocityBarrier, positionBarrier, pauseSemaphore));
         }
     }
 
@@ -72,6 +70,7 @@ public class BoidsSimulator {
                 } else {
                     framerate = (int) (1000 / dtElapsed);
                 }
+                System.out.println("dtE - " + dtElapsed);
             }
         }
     }
@@ -84,7 +83,6 @@ public class BoidsSimulator {
 
     private void pauseWorkers() {
         if (workersAreAlive) {
-            System.out.println("stop workers");
             for (Worker worker : workers) {
                 worker.pause();
             }
@@ -94,7 +92,6 @@ public class BoidsSimulator {
 
     private void activeWorkers() {
         if (!workersAreAlive) {
-            System.out.println("start workers");
             for (Worker worker : workers) {
                 worker.play();
             }

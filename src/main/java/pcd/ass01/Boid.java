@@ -2,11 +2,16 @@ package pcd.ass01;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Boid {
 
     private P2d pos;
     private V2d vel;
+    private Lock lock = new ReentrantLock();
+    private Condition ottenuto = lock.newCondition();
 
     public Boid(P2d pos, V2d vel) {
     	this.pos = pos;

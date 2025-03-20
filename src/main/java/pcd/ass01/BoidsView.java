@@ -119,7 +119,6 @@ public class BoidsView {
     }
 
     public boolean isRunning() {
-        System.out.println(this.isRunning);
         return this.isRunning;
     }
 
