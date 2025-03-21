@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.LockSupport;
 
 public class Worker extends Thread {
 
@@ -12,7 +13,6 @@ public class Worker extends Thread {
     private final CyclicBarrier calculateVelocityBarrier;
     private final CyclicBarrier updateVelocityBarrier;
     private final CyclicBarrier positionBarrier;
-    private final Semaphore pauseSemaphore;
     private volatile boolean running = true;
 
     public Worker(String name, List<Boid> boidList, BoidsModel model,
@@ -25,29 +25,22 @@ public class Worker extends Thread {
         this.calculateVelocityBarrier = calculateVelocityBarrier;
         this.updateVelocityBarrier = updateVelocityBarrier;
         this.positionBarrier = positionBarrier;
-        this.pauseSemaphore = new Semaphore(0);
     }
 
     public void run() {
         while (true) {
-            log(getName() + " is run ");
             if (isSimulationPaused()) {
                 rest();
             }
             calculateVelocityWithBarrier();
             updateVelocityWithBarrier();
             updatePositionWithBarrier();
+            LockSupport.park();
         }
     }
 
     private void rest() {
-        log(getName() + " rest PRE acquire " + pauseSemaphore.getQueueLength());
-        try {
-            pauseSemaphore.acquire();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        log(getName() + " rest POST acquire " + pauseSemaphore.getQueueLength());
+        LockSupport.park();
     }
 
     private boolean isSimulationPaused() {
@@ -70,9 +63,6 @@ public class Worker extends Thread {
         } catch (InterruptedException | BrokenBarrierException e) {
             throw new RuntimeException(e);
         }
-        if (updateVelocityBarrier.isBroken()) {
-            updateVelocityBarrier.reset();
-        }
     }
 
     private void calculateVelocityWithBarrier() {
@@ -81,9 +71,6 @@ public class Worker extends Thread {
             calculateVelocityBarrier.await();
         } catch (InterruptedException | BrokenBarrierException e) {
             throw new RuntimeException(e);
-        }
-        if (calculateVelocityBarrier.isBroken()) {
-            calculateVelocityBarrier.reset();
         }
     }
 
@@ -95,7 +82,7 @@ public class Worker extends Thread {
 
     public void play() {
         running = true;
-        pauseSemaphore.release();
+        LockSupport.unpark(this);
     }
 
     public void pause() {
@@ -103,8 +90,6 @@ public class Worker extends Thread {
     }
 
     public void releaseWork() {
-        if (positionBarrier.isBroken()) {
-            positionBarrier.reset();
-        }
+        LockSupport.unpark(this);
     }
 }
