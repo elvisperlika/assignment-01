@@ -1,27 +1,28 @@
 package pcd.ass01;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Hashtable;
 
 public class BoidsView {
 
+    public static final String PAUSE_STRING = "PAUSE";
+    private static final String PLAY_STRING = "PLAY";
     private JFrame frame;
     private BoidsPanel boidsPanel;
     private JSlider cohesionSlider, separationSlider, alignmentSlider;
-    private JButton startButton;
+    private JTextField nBoidsTextField;
+    private JButton playButton;
     private BoidsModel model;
     private int width, height;
-    private boolean isRunning = true;
+    private boolean isRunning = false;
+    private int nBoids;
 
-    public BoidsView(BoidsModel model, int width, int height) {
+    public BoidsView(BoidsModel model, int width, int height, int nBoids) {
         this.model = model;
         this.width = width;
         this.height = height;
+        this.nBoids = nBoids;
 
         frame = new JFrame("Boids Simulation");
         frame.setSize(width, height);
@@ -36,14 +37,34 @@ public class BoidsView {
 
         JPanel slidersPanel = new JPanel();
 
-        startButton = makeButton();
-        startButton.addActionListener(e -> {
+        nBoidsTextField = new JTextField(String.valueOf(this.nBoids), 10);
+        nBoidsTextField.setForeground(Color.BLACK);
+        nBoidsTextField.addActionListener(l -> {
+            nBoidsTextField.setForeground(Color.WHITE);
+            if (isRunning) {
+                nBoidsTextField.setBackground(Color.RED);
+                nBoidsTextField.setText("STOP SIMULATION");
+            } else {
+                String text = nBoidsTextField.getText();
+                if (!isNumeric(text)) {
+                    nBoidsTextField.setBackground(Color.ORANGE);
+                    nBoidsTextField.setText("PUT INTEGER");
+                } else {
+                    nBoidsTextField.setBackground(Color.WHITE);
+                    nBoidsTextField.setForeground(Color.BLACK);
+                    this.nBoids = (int) Double.parseDouble(nBoidsTextField.getText());
+                }
+            }
+        });
+
+        playButton = makeButton();
+        playButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
-                startButton.setText("PLAY");
+                playButton.setText(PLAY_STRING);
             } else {
                 play();
-                startButton.setText("PAUSE");
+                playButton.setText(PAUSE_STRING);
             }
         });
 
@@ -65,7 +86,8 @@ public class BoidsView {
             model.setCohesionWeight(0.1 * val);
         });
 
-        slidersPanel.add(startButton);
+        slidersPanel.add(playButton);
+        slidersPanel.add(nBoidsTextField);
         slidersPanel.add(new JLabel("Separation"));
         slidersPanel.add(separationSlider);
         slidersPanel.add(new JLabel("Alignment"));
@@ -80,6 +102,18 @@ public class BoidsView {
         frame.setVisible(true);
     }
 
+    private boolean isNumeric(String text) {
+        if (text == null) {
+            return false;
+        }
+        try {
+            double d = Double.parseDouble(text);
+        } catch (NumberFormatException nfe) {
+            return false;
+        }
+        return true;
+    }
+
     private void play() {
         this.isRunning = true;
     }
@@ -89,7 +123,7 @@ public class BoidsView {
     }
 
     private JButton makeButton() {
-        return new JButton("PAUSE");
+        return new JButton(PLAY_STRING);
     }
 
     private JSlider makeSlider() {
@@ -124,4 +158,7 @@ public class BoidsView {
         return this.isRunning;
     }
 
+    public int getSizeBoids() {
+        return this.nBoids;
+    }
 }

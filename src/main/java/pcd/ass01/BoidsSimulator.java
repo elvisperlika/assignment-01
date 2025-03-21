@@ -1,10 +1,10 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Semaphore;
 
 public class BoidsSimulator {
 
@@ -15,11 +15,12 @@ public class BoidsSimulator {
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = 2;
+    private final int N_WORKERS = CORES;
     private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private final CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
     private boolean workersAreAlive = false;
+    private boolean workersStarted = false;
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -28,6 +29,8 @@ public class BoidsSimulator {
     }
 
     private void initWorkers() {
+        workers.clear();
+
         int boidsForWorker = model.getBoids().size() / N_WORKERS;
         List<List<Boid>> partitions = new ArrayList<>();
         for (int i=0; i< model.getBoids().size(); i += boidsForWorker) {
@@ -37,6 +40,7 @@ public class BoidsSimulator {
         int i = 0;
         for (List<Boid> partition : partitions) {
             i++;
+            System.out.println("PARTITION SIZE: " + partition.size());
             workers.add(new Worker("W" + i, partition, model,
                     calculateVelocityBarrier,
                     updateVelocityBarrier,
@@ -49,12 +53,16 @@ public class BoidsSimulator {
     }
 
     public void runSimulation() {
-        startWorkers();
         while (true) {
-            // System.out.println("pS Queue - " + pauseSemaphore.getQueueLength());
             var t0 = System.currentTimeMillis();
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
+                    if (view.get().getSizeBoids() != model.getBoids().size()) {
+                        pauseWorkers();
+                        model.resetBoids(view.get().getSizeBoids());
+                        initWorkers();
+                        workersStarted = false;
+                    }
                     activeWorkers();
                     view.get().update(framerate);
                     releaseWorkers();
@@ -84,10 +92,6 @@ public class BoidsSimulator {
         workers.forEach(Worker::releaseWork);
     }
 
-    private void startWorkers() {
-        workers.forEach(Worker::start);
-    }
-
     private void pauseWorkers() {
         if (workersAreAlive) {
             workers.forEach(Worker::pause);
@@ -96,6 +100,10 @@ public class BoidsSimulator {
     }
 
     private void activeWorkers() {
+        if (!workersStarted) {
+            workers.forEach(Worker::start);
+            workersStarted = true;
+        }
         if (!workersAreAlive) {
             workers.forEach(Worker::play);
             workersAreAlive = true;
