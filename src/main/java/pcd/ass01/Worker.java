@@ -31,11 +31,25 @@ public class Worker extends Thread {
 
     public void run() {
         while (true) {
-            checkIfSimulationIsPause();
+            if (isSimulationPaused()) {
+                rest();
+            }
             calculateVelocityWithBarrier();
             updateVelocityWithBarrier();
             updatePositionWithBarrier();
         }
+    }
+
+    private void rest() {
+        try {
+            pauseSemaphore.acquire();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean isSimulationPaused() {
+        return !running;
     }
 
     private void updatePositionWithBarrier() {
@@ -71,16 +85,6 @@ public class Worker extends Thread {
         }
         if (calculateVelocityBarrier.isBroken()) {
             calculateVelocityBarrier.reset();
-        }
-    }
-
-    private void checkIfSimulationIsPause() {
-        if (!running) {
-            try {
-                pauseSemaphore.acquire();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 
