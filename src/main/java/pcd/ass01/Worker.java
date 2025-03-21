@@ -18,19 +18,19 @@ public class Worker extends Thread {
     public Worker(String name, List<Boid> boidList, BoidsModel model,
                   CyclicBarrier calculateVelocityBarrier,
                   CyclicBarrier updateVelocityBarrier,
-                  CyclicBarrier positionBarrier,
-                  Semaphore pauseSemaphore) {
+                  CyclicBarrier positionBarrier) {
         super(name);
         this.boidList = boidList;
         this.model = model;
         this.calculateVelocityBarrier = calculateVelocityBarrier;
         this.updateVelocityBarrier = updateVelocityBarrier;
         this.positionBarrier = positionBarrier;
-        this.pauseSemaphore = pauseSemaphore;
+        this.pauseSemaphore = new Semaphore(0);
     }
 
     public void run() {
         while (true) {
+            log(getName() + " is run ");
             if (isSimulationPaused()) {
                 rest();
             }
@@ -41,11 +41,13 @@ public class Worker extends Thread {
     }
 
     private void rest() {
+        log(getName() + " rest PRE acquire " + pauseSemaphore.getQueueLength());
         try {
             pauseSemaphore.acquire();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        log(getName() + " rest POST acquire " + pauseSemaphore.getQueueLength());
     }
 
     private boolean isSimulationPaused() {

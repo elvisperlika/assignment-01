@@ -10,18 +10,16 @@ public class BoidsSimulator {
 
     private BoidsModel model;
     private Optional<BoidsView> view;
-    private List<Worker> workers = new ArrayList<>();
+    private final List<Worker> workers = new ArrayList<>();
 
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES;
-    private CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
-    private Semaphore pauseSemaphore = new Semaphore(1);
+    private final int N_WORKERS = 2;
+    private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
+    private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
+    private final CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
     private boolean workersAreAlive = false;
-    private Semaphore workCompleteSemaphore = new Semaphore(1);
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -42,8 +40,7 @@ public class BoidsSimulator {
             workers.add(new Worker("W" + i, partition, model,
                     calculateVelocityBarrier,
                     updateVelocityBarrier,
-                    positionBarrier,
-                    pauseSemaphore));
+                    positionBarrier));
         }
     }
 
@@ -54,6 +51,7 @@ public class BoidsSimulator {
     public void runSimulation() {
         startWorkers();
         while (true) {
+            // System.out.println("pS Queue - " + pauseSemaphore.getQueueLength());
             var t0 = System.currentTimeMillis();
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
@@ -87,25 +85,19 @@ public class BoidsSimulator {
     }
 
     private void startWorkers() {
-        for (Worker worker : workers) {
-            worker.start();
-        }
+        workers.forEach(Worker::start);
     }
 
     private void pauseWorkers() {
         if (workersAreAlive) {
-            for (Worker worker : workers) {
-                worker.pause();
-            }
+            workers.forEach(Worker::pause);
         }
         workersAreAlive = false;
     }
 
     private void activeWorkers() {
         if (!workersAreAlive) {
-            for (Worker worker : workers) {
-                worker.play();
-            }
+            workers.forEach(Worker::play);
             workersAreAlive = true;
         }
     }
