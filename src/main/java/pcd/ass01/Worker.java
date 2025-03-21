@@ -59,9 +59,6 @@ public class Worker extends Thread {
         } catch (InterruptedException | BrokenBarrierException e) {
             throw new RuntimeException(e);
         }
-        if (positionBarrier.isBroken()) {
-            positionBarrier.reset();
-        }
     }
 
     private void updateVelocityWithBarrier() {
@@ -103,4 +100,9 @@ public class Worker extends Thread {
         running = false;
     }
 
+    public void releaseWork() {
+        if (positionBarrier.isBroken()) {
+            positionBarrier.reset();
+        }
+    }
 }

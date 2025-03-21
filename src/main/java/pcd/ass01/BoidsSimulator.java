@@ -12,7 +12,7 @@ public class BoidsSimulator {
     private Optional<BoidsView> view;
     private List<Worker> workers = new ArrayList<>();
 
-    private static final int FRAMERATE = 25;
+    private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES;
@@ -21,6 +21,7 @@ public class BoidsSimulator {
     private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
     private Semaphore pauseSemaphore = new Semaphore(1);
     private boolean workersAreAlive = false;
+    private Semaphore workCompleteSemaphore = new Semaphore(1);
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -58,6 +59,7 @@ public class BoidsSimulator {
                 if (view.get().isRunning()) {
                     activeWorkers();
                     view.get().update(framerate);
+                    releaseWorkers();
                 } else {
                     pauseWorkers();
                 }
@@ -78,6 +80,10 @@ public class BoidsSimulator {
                 }
             }
         }
+    }
+
+    private void releaseWorkers() {
+        workers.forEach(Worker::releaseWork);
     }
 
     private void startWorkers() {
