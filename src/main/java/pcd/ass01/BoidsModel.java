@@ -1,8 +1,6 @@
 package pcd.ass01;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class BoidsModel {
     
@@ -34,15 +32,16 @@ public class BoidsModel {
         this.perceptionRadius = perceptionRadius;
         this.avoidRadius = avoidRadius;
         
-    	boids = new ArrayList<>();
+    	var tmpBoids = new ArrayList<Boid>();
         for (int i = 0; i < nBoids; i++) {
         	P2d pos = new P2d(-width/2 + Math.random() * width, -height/2 + Math.random() * height);
         	V2d vel = new V2d(Math.random() * maxSpeed/2 - maxSpeed/4, Math.random() * maxSpeed/2 - maxSpeed/4);
-        	boids.add(new Boid(pos, vel));
+        	tmpBoids.add(new Boid(pos, vel));
         }
+        boids = Collections.synchronizedList(tmpBoids);
     }
     
-    public synchronized List<Boid> getBoids(){
+    public List<Boid> getBoids(){
     	return boids;
     }
     

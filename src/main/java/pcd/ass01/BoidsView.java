@@ -40,26 +40,29 @@ public class BoidsView {
         startButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
-                startButton.setText("START");
+                startButton.setText("PLAY");
             } else {
                 play();
-                startButton.setText("STOP");
+                startButton.setText("PAUSE");
             }
         });
-        cohesionSlider = makeSlider();
-        cohesionSlider.addChangeListener(l -> {
-            var val = cohesionSlider.getValue();
-            model.setCohesionWeight(0.1 * val);
-        });
+
         separationSlider = makeSlider();
         separationSlider.addChangeListener(l -> {
             var val = separationSlider.getValue();
             model.setSeparationWeight(0.1 * val);
         });
+
         alignmentSlider = makeSlider();
         alignmentSlider.addChangeListener(l -> {
             var val = alignmentSlider.getValue();
             model.setAlignmentWeight(0.1 * val);
+        });
+
+        cohesionSlider = makeSlider();
+        cohesionSlider.addChangeListener(l -> {
+            var val = cohesionSlider.getValue();
+            model.setCohesionWeight(0.1 * val);
         });
 
         slidersPanel.add(startButton);
@@ -86,8 +89,7 @@ public class BoidsView {
     }
 
     private JButton makeButton() {
-        System.out.println("-> " + this.isRunning);
-        return new JButton("STOP");
+        return new JButton("PAUSE");
     }
 
     private JSlider makeSlider() {

@@ -12,6 +12,9 @@ public class Boid {
     private V2d vel;
     private Lock lock = new ReentrantLock();
     private Condition ottenuto = lock.newCondition();
+    private volatile V2d separation;
+    private volatile V2d alignment;
+    private volatile V2d cohesion;
 
     public Boid(P2d pos, V2d vel) {
     	this.pos = pos;
@@ -60,22 +63,21 @@ public class Boid {
         if (pos.y() >= model.getMaxY()) pos = pos.sum(new V2d(0, -model.getHeight()));
     }
 
-    public synchronized void updateVelocity(BoidsModel model) {
+    public void calculateVelocity(BoidsModel model) {
 
     	/* change velocity vector according to separation, alignment, cohesion */
     	List<Boid> nearbyBoids = getNearbyBoids(model);
     	
-    	V2d separation = calculateSeparation(nearbyBoids, model);
-    	V2d alignment = calculateAlignment(nearbyBoids, model);
-    	V2d cohesion = calculateCohesion(nearbyBoids, model);
-    	
-    	vel = vel.sum(alignment.mul(model.getAlignmentWeight()))
-    			.sum(separation.mul(model.getSeparationWeight()))
-    			.sum(cohesion.mul(model.getCohesionWeight()));
-        notifyAll();
+        separation = calculateSeparation(nearbyBoids, model);
+    	alignment = calculateAlignment(nearbyBoids, model);
+    	cohesion = calculateCohesion(nearbyBoids, model);
     }
 
-    public synchronized void normalizeVelocity(BoidsModel model) {
+    public void updateAndNormalizeVelocity(BoidsModel model) {
+
+        vel = vel.sum(alignment.mul(model.getAlignmentWeight()))
+                .sum(separation.mul(model.getSeparationWeight()))
+                .sum(cohesion.mul(model.getCohesionWeight()));
 
         /* Limit speed to MAX_SPEED */
         double speed = vel.abs();
@@ -83,10 +85,9 @@ public class Boid {
         if (speed > model.getMaxSpeed()) {
             vel = vel.getNormalized().mul(model.getMaxSpeed());
         }
-        notifyAll();
     }
     
-    public synchronized void updatePos(BoidsModel model) {
+    public void updatePos(BoidsModel model) {
 
         /* Update position */
 
@@ -98,7 +99,7 @@ public class Boid {
         if (pos.x() >= model.getMaxX()) pos = pos.sum(new V2d(-model.getWidth(), 0));
         if (pos.y() < model.getMinY()) pos = pos.sum(new V2d(0, model.getHeight()));
         if (pos.y() >= model.getMaxY()) pos = pos.sum(new V2d(0, -model.getHeight()));
-        notifyAll();
+
     }     
     
     private List<Boid> getNearbyBoids(BoidsModel model) {

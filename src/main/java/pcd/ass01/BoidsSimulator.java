@@ -12,11 +12,12 @@ public class BoidsSimulator {
     private Optional<BoidsView> view;
     private List<Worker> workers = new ArrayList<>();
 
-    private static final int FRAMERATE = 50;
+    private static final int FRAMERATE = 25;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = 9;
-    private CyclicBarrier velocityBarrier = new CyclicBarrier(N_WORKERS);
+    private final int N_WORKERS = CORES;
+    private CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
+    private CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
     private Semaphore pauseSemaphore = new Semaphore(1);
     private boolean workersAreAlive = false;
@@ -37,7 +38,11 @@ public class BoidsSimulator {
         int i = 0;
         for (List<Boid> partition : partitions) {
             i++;
-            workers.add(new Worker("W" + i, partition, model, velocityBarrier, positionBarrier, pauseSemaphore));
+            workers.add(new Worker("W" + i, partition, model,
+                    calculateVelocityBarrier,
+                    updateVelocityBarrier,
+                    positionBarrier,
+                    pauseSemaphore));
         }
     }
 
@@ -59,18 +64,18 @@ public class BoidsSimulator {
 
                 var t1 = System.currentTimeMillis();
                 var dtElapsed = t1 - t0;
-                var framratePeriod = 1000 / FRAMERATE;
+                var frameratePeriod = 1000 / FRAMERATE;
 
-                if (dtElapsed < framratePeriod) {
+                if (dtElapsed < frameratePeriod) {
                     try {
-                        Thread.sleep(framratePeriod - dtElapsed);
+                        Thread.sleep(frameratePeriod - dtElapsed);
                     } catch (Exception ex) {
+                        System.out.println(ex);
                     }
                     framerate = FRAMERATE;
                 } else {
                     framerate = (int) (1000 / dtElapsed);
                 }
-                System.out.println("dtE - " + dtElapsed);
             }
         }
     }
