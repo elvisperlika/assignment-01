@@ -1,26 +1,23 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.*;
 
 public class BoidsSimulator {
 
     private BoidsModel model;
     private Optional<BoidsView> view;
-    private final List<Worker> workers = new ArrayList<>();
+    private ForkJoinPool forkJoinPool;
 
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES;
-    private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private final CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
-    private boolean workersAreAlive = false;
-    private boolean workersStarted = false;
+    private List<CalculateVelocityTask> calcVelocityTasks;
+    private List<UpdateVelocityTask> updateVelocityTasks;
+    private List<UpdatePositionTask> updatePositionTasks;
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -29,30 +26,16 @@ public class BoidsSimulator {
     }
 
     private void initWorkers() {
-        workers.clear();
+        forkJoinPool = new ForkJoinPool(N_WORKERS);
+        calcVelocityTasks = new ArrayList<>();
+        updateVelocityTasks = new ArrayList<>();
+        updatePositionTasks = new ArrayList<>();
+        model.getBoids().forEach(boid -> {
+                    calcVelocityTasks.add(new CalculateVelocityTask(boid, model));
+                    updateVelocityTasks.add(new UpdateVelocityTask(boid, model));
+                    updatePositionTasks.add(new UpdatePositionTask(boid, model));
+                });
 
-        int boidsForWorker = model.getBoids().size() / N_WORKERS;
-        List<List<Boid>> partitions = new ArrayList<>();
-        for (int i = 0; i < N_WORKERS; i++) {
-            partitions.add(new ArrayList<>());
-        }
-
-        int i = 0;
-        for (Boid boid : model.getBoids()) {
-            if (i == partitions.size()) {
-                i = 0;
-            }
-            partitions.get(i).add(boid);
-            i++;
-        }
-
-        i = 0;
-        for (List<Boid> part : partitions) {
-            workers.add(new Worker("W" + i, part, model,
-                    calculateVelocityBarrier,
-                    updateVelocityBarrier,
-                    positionBarrier));
-        }
     }
 
     public void attachView(BoidsView view) {
@@ -65,16 +48,30 @@ public class BoidsSimulator {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
                     if (setNewBoidsSize()) {
-                        pauseWorkers();
+                        forkJoinPool.shutdownNow();
                         model.resetBoids(view.get().getSizeBoids());
                         initWorkers();
-                        workersStarted = false;
                     }
-                    activeWorkers();
+
+                    try {
+                        forkJoinPool.invokeAll(calcVelocityTasks);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+
+                    try {
+                        forkJoinPool.invokeAll(updateVelocityTasks);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+
+                    try {
+                        forkJoinPool.invokeAll(updatePositionTasks);
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+
                     view.get().update(framerate);
-                    releaseWorkers();
-                } else {
-                    pauseWorkers();
                 }
 
                 var t1 = System.currentTimeMillis();
@@ -97,28 +94,6 @@ public class BoidsSimulator {
 
     private boolean setNewBoidsSize() {
         return view.get().getSizeBoids() != model.getBoids().size();
-    }
-
-    private void releaseWorkers() {
-        workers.forEach(Worker::releaseWork);
-    }
-
-    private void pauseWorkers() {
-        if (workersAreAlive) {
-            workers.forEach(Worker::pause);
-        }
-        workersAreAlive = false;
-    }
-
-    private void activeWorkers() {
-        if (!workersStarted) {
-            workers.forEach(Worker::start);
-            workersStarted = true;
-        }
-        if (!workersAreAlive) {
-            workers.forEach(Worker::play);
-            workersAreAlive = true;
-        }
     }
 
 }
