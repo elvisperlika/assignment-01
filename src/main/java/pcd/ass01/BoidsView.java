@@ -87,6 +87,7 @@ public class BoidsView {
         });
 
         slidersPanel.add(playButton);
+        slidersPanel.add(new JLabel("Set size end press Enter"));
         slidersPanel.add(nBoidsTextField);
         slidersPanel.add(new JLabel("Separation"));
         slidersPanel.add(separationSlider);

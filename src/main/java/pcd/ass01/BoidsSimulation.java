@@ -1,5 +1,7 @@
 package pcd.ass01;
 
+import java.awt.*;
+
 public class BoidsSimulation {
 
 	final static int N_BOIDS = 1500;
@@ -14,8 +16,9 @@ public class BoidsSimulation {
     static final double PERCEPTION_RADIUS = 50.0;
     static final double AVOID_RADIUS = 20.0;
 
-	final static int SCREEN_WIDTH = 800; 
-	final static int SCREEN_HEIGHT = 800; 
+	static final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+	final static int SCREEN_WIDTH = screenSize.width;
+	final static int SCREEN_HEIGHT = screenSize.height;
 	
 
     public static void main(String[] args) {      
