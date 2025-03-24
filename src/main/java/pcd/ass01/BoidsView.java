@@ -51,7 +51,7 @@ public class BoidsView {
                     nBoidsTextField.setText("PUT INTEGER");
                 } else {
                     nBoidsTextField.setBackground(Color.WHITE);
-                    nBoidsTextField.setForeground(Color.BLACK);
+                    nBoidsTextField.setForeground(Color.GREEN);
                     this.nBoids = (int) Double.parseDouble(nBoidsTextField.getText());
                 }
             }
@@ -65,6 +65,7 @@ public class BoidsView {
             } else {
                 play();
                 playButton.setText(PAUSE_STRING);
+                nBoidsTextField.setForeground(Color.BLACK);
             }
         });
 
