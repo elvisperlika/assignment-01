@@ -33,15 +33,22 @@ public class BoidsSimulator {
 
         int boidsForWorker = model.getBoids().size() / N_WORKERS;
         List<List<Boid>> partitions = new ArrayList<>();
-        for (int i=0; i< model.getBoids().size(); i += boidsForWorker) {
-            partitions.add(model.getBoids().subList(i, Math.min(i + boidsForWorker, model.getBoids().size())));
+        for (int i = 0; i < N_WORKERS; i++) {
+            partitions.add(new ArrayList<>());
         }
 
         int i = 0;
-        for (List<Boid> partition : partitions) {
+        for (Boid boid : model.getBoids()) {
+            if (i == partitions.size()) {
+                i = 0;
+            }
+            partitions.get(i).add(boid);
             i++;
-            System.out.println("PARTITION SIZE: " + partition.size());
-            workers.add(new Worker("W" + i, partition, model,
+        }
+
+        i = 0;
+        for (List<Boid> part : partitions) {
+            workers.add(new Worker("W" + i, part, model,
                     calculateVelocityBarrier,
                     updateVelocityBarrier,
                     positionBarrier));
@@ -57,7 +64,7 @@ public class BoidsSimulator {
             var t0 = System.currentTimeMillis();
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    if (view.get().getSizeBoids() != model.getBoids().size()) {
+                    if (setNewBoidsSize()) {
                         pauseWorkers();
                         model.resetBoids(view.get().getSizeBoids());
                         initWorkers();
@@ -86,6 +93,10 @@ public class BoidsSimulator {
                 }
             }
         }
+    }
+
+    private boolean setNewBoidsSize() {
+        return view.get().getSizeBoids() != model.getBoids().size();
     }
 
     private void releaseWorkers() {
