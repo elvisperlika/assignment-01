@@ -160,7 +160,7 @@ public class BoidsView {
         return this.isRunning;
     }
 
-    public int getSizeBoids() {
+    public int getNumberOfBoids() {
         return this.nBoids;
     }
 }

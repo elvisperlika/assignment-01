@@ -1,7 +1,6 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
@@ -12,15 +11,14 @@ public class BoidsSimulator {
     private Optional<BoidsView> view;
     private final List<Worker> workers = new ArrayList<>();
 
-    private static final int FRAMERATE = 50;
+    private static final int FRAMERATE = 25;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES;
-    private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private final CyclicBarrier positionBarrier = new CyclicBarrier(N_WORKERS);
-    private boolean workersAreAlive = false;
-    private boolean workersStarted = false;
+    private final CyclicBarrier updatePositionBarrier = new CyclicBarrier(N_WORKERS);
+    private boolean workersArePlaying = false;
+    private long t0;
 
     public BoidsSimulator(BoidsModel model) {
         this.model = model;
@@ -31,7 +29,6 @@ public class BoidsSimulator {
     private void initWorkers() {
         workers.clear();
 
-        int boidsForWorker = model.getBoids().size() / N_WORKERS;
         List<List<Boid>> partitions = new ArrayList<>();
         for (int i = 0; i < N_WORKERS; i++) {
             partitions.add(new ArrayList<>());
@@ -49,10 +46,12 @@ public class BoidsSimulator {
         i = 0;
         for (List<Boid> part : partitions) {
             workers.add(new Worker("W" + i, part, model,
-                    calculateVelocityBarrier,
                     updateVelocityBarrier,
-                    positionBarrier));
+                    updatePositionBarrier));
+            i++;
         }
+
+        startWorkers();
     }
 
     public void attachView(BoidsView view) {
@@ -61,64 +60,81 @@ public class BoidsSimulator {
 
     public void runSimulation() {
         while (true) {
-            var t0 = System.currentTimeMillis();
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    if (setNewBoidsSize()) {
-                        pauseWorkers();
-                        model.resetBoids(view.get().getSizeBoids());
-                        initWorkers();
-                        workersStarted = false;
+                    if (!workersArePlaying) {
+                        playWorkers();
+                        t0 = System.currentTimeMillis();
                     }
-                    activeWorkers();
-                    view.get().update(framerate);
-                    releaseWorkers();
+                    if (isAllWorkComplete()) {
+                        view.get().update(framerate);
+                        updateFrameRate(t0);
+                        t0 = System.currentTimeMillis();
+                        resumeWorkers();
+                    }
                 } else {
-                    pauseWorkers();
+                    if (workersArePlaying) {
+                        pauseWorkers();
+                    }
                 }
 
-                var t1 = System.currentTimeMillis();
-                var dtElapsed = t1 - t0;
-                var frameratePeriod = 1000 / FRAMERATE;
-
-                if (dtElapsed < frameratePeriod) {
-                    try {
-                        Thread.sleep(frameratePeriod - dtElapsed);
-                    } catch (Exception ex) {
-                        System.out.println(ex);
-                    }
-                    framerate = FRAMERATE;
-                } else {
-                    framerate = (int) (1000 / dtElapsed);
+                if (setNewBoidsSize()) {
+                    model.resetBoids(view.get().getNumberOfBoids());
+                    view.get().update(framerate);
+                    initWorkers();
+                    playWorkers();
                 }
             }
         }
     }
 
-    private boolean setNewBoidsSize() {
-        return view.get().getSizeBoids() != model.getBoids().size();
+    private void updateFrameRate(long t0) {
+        var t1 = System.currentTimeMillis();
+        var dtElapsed = t1 - t0;
+
+        synchronized (System.out) {
+            System.out.println("DTE: " + dtElapsed / 1000);
+        }
+
+        var frameratePeriod = 1000 / FRAMERATE;
+
+        if (dtElapsed < frameratePeriod) {
+            try {
+                Thread.sleep(frameratePeriod - dtElapsed);
+            } catch (Exception ex) {
+                System.out.println(ex);
+            }
+            framerate = FRAMERATE;
+        } else {
+            framerate = (int) (1000 / dtElapsed);
+            System.out.println("FR: " + framerate);
+        }
     }
 
-    private void releaseWorkers() {
-        workers.forEach(Worker::releaseWork);
+    private boolean isAllWorkComplete() {
+        return workers.stream().allMatch(Worker::isWorkComplete);
+    }
+
+    private boolean setNewBoidsSize() {
+        return view.get().getNumberOfBoids() != model.getBoids().size();
+    }
+
+    private void resumeWorkers() {
+        workers.forEach(Worker::resumeWork);
     }
 
     private void pauseWorkers() {
-        if (workersAreAlive) {
-            workers.forEach(Worker::pause);
-        }
-        workersAreAlive = false;
+        workers.forEach(Worker::pause);
     }
 
-    private void activeWorkers() {
-        if (!workersStarted) {
-            workers.forEach(Worker::start);
-            workersStarted = true;
-        }
-        if (!workersAreAlive) {
-            workers.forEach(Worker::play);
-            workersAreAlive = true;
-        }
+    private void playWorkers() {
+        workersArePlaying = true;
+        workers.forEach(Worker::play);
+    }
+
+    private void startWorkers() {
+        workersArePlaying = false;
+        workers.forEach(Worker::start);
     }
 
 }

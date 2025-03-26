@@ -3,26 +3,23 @@ package pcd.ass01;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.LockSupport;
 
 public class Worker extends Thread {
 
     private final List<Boid> boidList;
     private final BoidsModel model;
-    private final CyclicBarrier calculateVelocityBarrier;
     private final CyclicBarrier updateVelocityBarrier;
     private final CyclicBarrier positionBarrier;
-    private volatile boolean running = true;
+    private volatile boolean running = false;
+    private boolean workComplete = false;
 
     public Worker(String name, List<Boid> boidList, BoidsModel model,
-                  CyclicBarrier calculateVelocityBarrier,
                   CyclicBarrier updateVelocityBarrier,
                   CyclicBarrier positionBarrier) {
         super(name);
         this.boidList = boidList;
         this.model = model;
-        this.calculateVelocityBarrier = calculateVelocityBarrier;
         this.updateVelocityBarrier = updateVelocityBarrier;
         this.positionBarrier = positionBarrier;
     }
@@ -32,14 +29,14 @@ public class Worker extends Thread {
             if (isSimulationPaused()) {
                 rest();
             }
-            calculateVelocityWithBarrier();
+            // log(" is working ");
             updateVelocityWithBarrier();
             updatePositionWithBarrier();
-            LockSupport.park();
         }
     }
 
     private void rest() {
+        // log("REST");
         LockSupport.park();
     }
 
@@ -48,27 +45,19 @@ public class Worker extends Thread {
     }
 
     private void updatePositionWithBarrier() {
-        try {
-            boidList.forEach(boid -> boid.updatePos(model));
-            positionBarrier.await();
-        } catch (InterruptedException | BrokenBarrierException e) {
-            throw new RuntimeException(e);
-        }
+        boidList.forEach(boid -> boid.updatePos(model));
+        setWorkComplete();
+        rest();
+    }
+
+    private void setWorkComplete() {
+        workComplete = true;
     }
 
     private void updateVelocityWithBarrier() {
         try {
-            boidList.forEach(boid -> boid.updateAndNormalizeVelocity(model));
+            boidList.forEach(boid -> boid.updateVelocity(model));
             updateVelocityBarrier.await();
-        } catch (InterruptedException | BrokenBarrierException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void calculateVelocityWithBarrier() {
-        try {
-            boidList.forEach(boid -> boid.calculateVelocity(model));
-            calculateVelocityBarrier.await();
         } catch (InterruptedException | BrokenBarrierException e) {
             throw new RuntimeException(e);
         }
@@ -76,7 +65,7 @@ public class Worker extends Thread {
 
     private void log(String msg) {
         synchronized (System.out) {
-            System.out.println("[" + this + "] " + msg);
+            System.out.println("[" + this + "] " + getName() + " -> " + msg);
         }
     }
 
@@ -89,7 +78,11 @@ public class Worker extends Thread {
         running = false;
     }
 
-    public void releaseWork() {
+    public void resumeWork() {
         LockSupport.unpark(this);
+    }
+
+    public boolean isWorkComplete() {
+        return workComplete;
     }
 }
