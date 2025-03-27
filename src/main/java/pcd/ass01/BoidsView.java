@@ -2,6 +2,7 @@ package pcd.ass01;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.util.Hashtable;
 
 public class BoidsView {
@@ -52,7 +53,7 @@ public class BoidsView {
                 } else {
                     nBoidsTextField.setBackground(Color.WHITE);
                     nBoidsTextField.setForeground(Color.GREEN);
-                    this.nBoids = (int) Double.parseDouble(nBoidsTextField.getText());
+                    this.nBoids = Integer.parseInt(nBoidsTextField.getText());
                 }
             }
         });

@@ -5,22 +5,22 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
 
-public class BoidsSimulator {
+public class BoidsSimulatorController {
 
     private BoidsModel model;
     private Optional<BoidsView> view;
     private final List<Worker> workers = new ArrayList<>();
 
-    private static final int FRAMERATE = 25;
+    private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES;
+    private final int N_WORKERS = CORES + 1;
     private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private final CyclicBarrier updatePositionBarrier = new CyclicBarrier(N_WORKERS);
-    private boolean workersArePlaying = false;
     private long t0;
+    private final ManagerMonitor managerMonitor = new ManagerMonitor(N_WORKERS);
+    private boolean workersWorking = false;
 
-    public BoidsSimulator(BoidsModel model) {
+    public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
         initWorkers();
@@ -45,13 +45,19 @@ public class BoidsSimulator {
 
         i = 0;
         for (List<Boid> part : partitions) {
-            workers.add(new Worker("W" + i, part, model,
+            workers.add(new Worker("W" + i,
+                    part,
+                    model,
                     updateVelocityBarrier,
-                    updatePositionBarrier));
+                    managerMonitor));
             i++;
         }
-
         startWorkers();
+    }
+
+    private void startWorkers() {
+        workersWorking = false;
+        workers.forEach(Worker::start);
     }
 
     public void attachView(BoidsView view) {
@@ -60,44 +66,53 @@ public class BoidsSimulator {
 
     public void runSimulation() {
         while (true) {
+            // System.out.println("RUN");
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    if (!workersArePlaying) {
-                        playWorkers();
-                        t0 = System.currentTimeMillis();
-                    }
-                    if (isAllWorkComplete()) {
+                    playWork();
+                    if (managerMonitor.isAllWorkComplete()) {
                         view.get().update(framerate);
                         updateFrameRate(t0);
-                        t0 = System.currentTimeMillis();
-                        resumeWorkers();
+                        workersWorking = false;
                     }
                 } else {
-                    if (workersArePlaying) {
-                        pauseWorkers();
-                    }
+                    stopWork();
                 }
 
-                if (setNewBoidsSize()) {
+                if (isSetNewNumberOfBoids()) {
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
                     initWorkers();
-                    playWorkers();
+                    workersWorking = false;
                 }
             }
+        }
+    }
+
+    private void stopWork() {
+        if (workersWorking) {
+            workersWorking = false;
+            workers.forEach(Worker::pause);
+        }
+    }
+
+    private boolean isSetNewNumberOfBoids() {
+        return view.get().getNumberOfBoids() != model.getBoids().size();
+    }
+
+    private void playWork() {
+        if (!workersWorking) {
+            workersWorking = true;
+            managerMonitor.resetWorksCounter();
+            workers.forEach(Worker::play);
+            t0 = System.currentTimeMillis();
         }
     }
 
     private void updateFrameRate(long t0) {
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
-
-        synchronized (System.out) {
-            System.out.println("DTE: " + dtElapsed / 1000);
-        }
-
         var frameratePeriod = 1000 / FRAMERATE;
-
         if (dtElapsed < frameratePeriod) {
             try {
                 Thread.sleep(frameratePeriod - dtElapsed);
@@ -107,34 +122,6 @@ public class BoidsSimulator {
             framerate = FRAMERATE;
         } else {
             framerate = (int) (1000 / dtElapsed);
-            System.out.println("FR: " + framerate);
         }
     }
-
-    private boolean isAllWorkComplete() {
-        return workers.stream().allMatch(Worker::isWorkComplete);
-    }
-
-    private boolean setNewBoidsSize() {
-        return view.get().getNumberOfBoids() != model.getBoids().size();
-    }
-
-    private void resumeWorkers() {
-        workers.forEach(Worker::resumeWork);
-    }
-
-    private void pauseWorkers() {
-        workers.forEach(Worker::pause);
-    }
-
-    private void playWorkers() {
-        workersArePlaying = true;
-        workers.forEach(Worker::play);
-    }
-
-    private void startWorkers() {
-        workersArePlaying = false;
-        workers.forEach(Worker::start);
-    }
-
 }

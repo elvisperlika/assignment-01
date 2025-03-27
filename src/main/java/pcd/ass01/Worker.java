@@ -10,48 +10,39 @@ public class Worker extends Thread {
     private final List<Boid> boidList;
     private final BoidsModel model;
     private final CyclicBarrier updateVelocityBarrier;
-    private final CyclicBarrier positionBarrier;
-    private volatile boolean running = false;
-    private boolean workComplete = false;
+    private final ManagerMonitor managerMonitor;
+    private volatile boolean simulationRunning = false;
 
-    public Worker(String name, List<Boid> boidList, BoidsModel model,
+    public Worker(String name,
+                  List<Boid> boidList,
+                  BoidsModel model,
                   CyclicBarrier updateVelocityBarrier,
-                  CyclicBarrier positionBarrier) {
+                  ManagerMonitor managerMonitor) {
         super(name);
         this.boidList = boidList;
         this.model = model;
         this.updateVelocityBarrier = updateVelocityBarrier;
-        this.positionBarrier = positionBarrier;
+        this.managerMonitor = managerMonitor;
     }
 
     public void run() {
         while (true) {
-            if (isSimulationPaused()) {
-                rest();
+            if (!simulationRunning) {
+                LockSupport.park();
             }
-            // log(" is working ");
             updateVelocityWithBarrier();
-            updatePositionWithBarrier();
+            updatePosition();
+            workIsComplete();
         }
     }
 
-    private void rest() {
-        // log("REST");
+    private void workIsComplete() {
+        managerMonitor.incWorksCompleted();
         LockSupport.park();
     }
 
-    private boolean isSimulationPaused() {
-        return !running;
-    }
-
-    private void updatePositionWithBarrier() {
+    private void updatePosition() {
         boidList.forEach(boid -> boid.updatePos(model));
-        setWorkComplete();
-        rest();
-    }
-
-    private void setWorkComplete() {
-        workComplete = true;
     }
 
     private void updateVelocityWithBarrier() {
@@ -70,19 +61,11 @@ public class Worker extends Thread {
     }
 
     public void play() {
-        running = true;
+        simulationRunning = true;
         LockSupport.unpark(this);
     }
 
     public void pause() {
-        running = false;
-    }
-
-    public void resumeWork() {
-        LockSupport.unpark(this);
-    }
-
-    public boolean isWorkComplete() {
-        return workComplete;
+        simulationRunning = false;
     }
 }

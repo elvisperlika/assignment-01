@@ -4,7 +4,7 @@ import java.awt.*;
 
 public class BoidsSimulation {
 
-	final static int N_BOIDS = 9000;
+	final static int N_BOIDS = 1000;
 
 	final static double SEPARATION_WEIGHT = 1.0;
     final static double ALIGNMENT_WEIGHT = 1.0;
@@ -29,7 +29,7 @@ public class BoidsSimulation {
     					MAX_SPEED,
     					PERCEPTION_RADIUS,
     					AVOID_RADIUS); 
-    	var sim = new BoidsSimulator(model);
+    	var sim = new BoidsSimulatorController(model);
     	var view = new BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT, N_BOIDS);
     	sim.attachView(view);
     	sim.runSimulation();
