@@ -11,27 +11,27 @@ public class Worker extends Thread {
     private final CyclicBarrier updateVelocityBarrier;
     private final CyclicBarrier calculateVelocityBarrier;
     private final ManagerMonitor managerMonitor;
-    private volatile boolean simulationRunning = false;
-    private volatile boolean isPaused = true;
+    private volatile boolean running;
 
     public Worker(String name,
                   List<Boid> boidList,
                   BoidsModel model,
                   CyclicBarrier calculateVelocityBarrier,
                   CyclicBarrier updateVelocityBarrier,
-                  ManagerMonitor managerMonitor) {
+                  ManagerMonitor managerMonitor, boolean running) {
         super(name);
         this.boidList = boidList;
         this.model = model;
         this.calculateVelocityBarrier = calculateVelocityBarrier;
         this.updateVelocityBarrier = updateVelocityBarrier;
         this.managerMonitor = managerMonitor;
+        this.running = running;
     }
 
     public void run() {
         while (!Thread.currentThread().isInterrupted()) {
             synchronized (this) {
-                while (isPaused) {
+                while (!running) {
                     try {
                         wait(); // Wait until notified
                     } catch (InterruptedException e) {
@@ -73,15 +73,15 @@ public class Worker extends Thread {
     private void updatePositionAndRest() {
         boidList.forEach(boid -> boid.updatePos(model));
         managerMonitor.incWorksCompleted();
-        isPaused = true;
+        running = false;
     }
 
     public synchronized void pauseWorker() {
-        isPaused = true;
+        running = false;
     }
 
     public synchronized void resumeWorker() {
-        isPaused = false;
+        running = true;
         notify(); // Notify the thread to continue
     }
 }

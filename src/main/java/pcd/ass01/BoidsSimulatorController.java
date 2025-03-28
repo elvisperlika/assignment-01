@@ -53,7 +53,8 @@ public class BoidsSimulatorController {
                     model,
                     calculateVelocityBarrier,
                     updateVelocityBarrier,
-                    managerMonitor));
+                    managerMonitor,
+                    workersWorking));
             i++;
         }
         startWorkers();
