@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.SynchronousQueue;
 
 public class BoidsSimulatorController {
 
@@ -15,15 +16,17 @@ public class BoidsSimulatorController {
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
+    private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private long t0;
     private final ManagerMonitor managerMonitor = new ManagerMonitor(N_WORKERS);
-    private boolean workersWorking = false;
+    private boolean workersWorking;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
         initWorkers();
+        view.ifPresent(boidsView -> workersWorking = boidsView.isRunning());
     }
 
     private void initWorkers() {
@@ -48,6 +51,7 @@ public class BoidsSimulatorController {
             workers.add(new Worker("W" + i,
                     part,
                     model,
+                    calculateVelocityBarrier,
                     updateVelocityBarrier,
                     managerMonitor));
             i++;
@@ -56,7 +60,6 @@ public class BoidsSimulatorController {
     }
 
     private void startWorkers() {
-        workersWorking = false;
         workers.forEach(Worker::start);
     }
 
@@ -66,17 +69,17 @@ public class BoidsSimulatorController {
 
     public void runSimulation() {
         while (true) {
-            // System.out.println("RUN");
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    playWork();
+                    resumeWork();
                     if (managerMonitor.isAllWorkComplete()) {
                         view.get().update(framerate);
+                        managerMonitor.resetWorksCounter();
                         updateFrameRate(t0);
                         workersWorking = false;
                     }
                 } else {
-                    stopWork();
+                    pauseWork();
                 }
 
                 if (isSetNewNumberOfBoids()) {
@@ -89,24 +92,23 @@ public class BoidsSimulatorController {
         }
     }
 
-    private void stopWork() {
+    private void pauseWork() {
         if (workersWorking) {
+            workers.forEach(Worker::pauseWorker);
             workersWorking = false;
-            workers.forEach(Worker::pause);
+        }
+    }
+
+    private void resumeWork() {
+        if (!workersWorking) {
+            t0 = System.currentTimeMillis();
+            workers.forEach(Worker::resumeWorker);
+            workersWorking = true;
         }
     }
 
     private boolean isSetNewNumberOfBoids() {
         return view.get().getNumberOfBoids() != model.getBoids().size();
-    }
-
-    private void playWork() {
-        if (!workersWorking) {
-            workersWorking = true;
-            managerMonitor.resetWorksCounter();
-            workers.forEach(Worker::play);
-            t0 = System.currentTimeMillis();
-        }
     }
 
     private void updateFrameRate(long t0) {

@@ -63,15 +63,16 @@ public class Boid {
         if (pos.y() >= model.getMaxY()) pos = pos.sum(new V2d(0, -model.getHeight()));
     }
 
-    public void updateVelocity(BoidsModel model) {
-
+    public void calculateVelocity(BoidsModel model) {
         /* change velocity vector according to separation, alignment, cohesion */
         List<Boid> nearbyBoids = getNearbyBoids(model);
 
         separation = calculateSeparation(nearbyBoids, model);
         alignment = calculateAlignment(nearbyBoids, model);
         cohesion = calculateCohesion(nearbyBoids, model);
+    }
 
+    public void updateVelocity(BoidsModel model) {
         vel = vel.sum(alignment.mul(model.getAlignmentWeight()))
                 .sum(separation.mul(model.getSeparationWeight()))
                 .sum(cohesion.mul(model.getCohesionWeight()));
