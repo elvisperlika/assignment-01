@@ -9,7 +9,7 @@ public class BoidsSimulatorController {
 
     private final BoidsModel model;
     private Optional<BoidsView> view;
-    private final List<Worker> workers = Collections.synchronizedList(new ArrayList<>());
+    private final List<Worker> workers = new ArrayList<>();
 
     private static final int FRAMERATE = 50;
     private int framerate;
