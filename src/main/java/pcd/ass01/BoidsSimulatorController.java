@@ -4,11 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.SynchronousQueue;
 
 public class BoidsSimulatorController {
 
-    private BoidsModel model;
+    private final BoidsModel model;
     private Optional<BoidsView> view;
     private final List<Worker> workers = new ArrayList<>();
 
@@ -21,6 +20,7 @@ public class BoidsSimulatorController {
     private long t0;
     private final ManagerMonitor managerMonitor = new ManagerMonitor(N_WORKERS);
     private boolean workersWorking;
+    private volatile boolean run = true;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -69,7 +69,7 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (true) {
+        while (run) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
                     resumeWork();
@@ -82,12 +82,12 @@ public class BoidsSimulatorController {
                 } else {
                     pauseWork();
                 }
-
-                if (isSetNewNumberOfBoids()) {
+                if (view.get().isResetButtonPressed()) {
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
                     initWorkers();
                     workersWorking = false;
+                    view.get().setRessedButtonUnpressed();
                 }
             }
         }
@@ -106,10 +106,6 @@ public class BoidsSimulatorController {
             workers.forEach(Worker::resumeWorker);
             workersWorking = true;
         }
-    }
-
-    private boolean isSetNewNumberOfBoids() {
-        return view.get().getNumberOfBoids() != model.getBoids().size();
     }
 
     private void updateFrameRate(long t0) {

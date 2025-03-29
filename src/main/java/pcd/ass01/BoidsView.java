@@ -2,13 +2,14 @@ package pcd.ass01;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.util.Hashtable;
 
 public class BoidsView {
 
     public static final String PAUSE_STRING = "PAUSE";
     private static final String PLAY_STRING = "PLAY";
+    private static final String RESET_STRING = "RESET";
+    private final JButton resetButton;
     private JFrame frame;
     private BoidsPanel boidsPanel;
     private JSlider cohesionSlider, separationSlider, alignmentSlider;
@@ -18,6 +19,7 @@ public class BoidsView {
     private int width, height;
     private boolean isRunning = false;
     private int nBoids;
+    private boolean isResetButtonPressed = false;
 
     public BoidsView(BoidsModel model, int width, int height, int nBoids) {
         this.model = model;
@@ -42,23 +44,18 @@ public class BoidsView {
         nBoidsTextField.setForeground(Color.BLACK);
         nBoidsTextField.addActionListener(l -> {
             nBoidsTextField.setForeground(Color.WHITE);
-            if (isRunning) {
-                nBoidsTextField.setBackground(Color.RED);
-                nBoidsTextField.setText("STOP SIMULATION");
+            String text = nBoidsTextField.getText();
+            if (!isNumeric(text)) {
+                nBoidsTextField.setBackground(Color.ORANGE);
+                nBoidsTextField.setText("PUT INTEGER");
             } else {
-                String text = nBoidsTextField.getText();
-                if (!isNumeric(text)) {
-                    nBoidsTextField.setBackground(Color.ORANGE);
-                    nBoidsTextField.setText("PUT INTEGER");
-                } else {
-                    nBoidsTextField.setBackground(Color.WHITE);
-                    nBoidsTextField.setForeground(Color.GREEN);
-                    this.nBoids = Integer.parseInt(nBoidsTextField.getText());
-                }
+                nBoidsTextField.setBackground(Color.WHITE);
+                nBoidsTextField.setForeground(Color.GREEN);
+                this.nBoids = Integer.parseInt(nBoidsTextField.getText());
             }
         });
 
-        playButton = makeButton();
+        playButton = makeButton(PLAY_STRING);
         playButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
@@ -69,6 +66,12 @@ public class BoidsView {
                 nBoidsTextField.setForeground(Color.BLACK);
             }
         });
+
+        resetButton = makeButton(RESET_STRING);
+        resetButton.addActionListener(e -> {
+            this.isResetButtonPressed = true;
+        });
+
 
         separationSlider = makeSlider();
         separationSlider.addChangeListener(l -> {
@@ -91,6 +94,7 @@ public class BoidsView {
         slidersPanel.add(playButton);
         slidersPanel.add(new JLabel("Set size end press Enter"));
         slidersPanel.add(nBoidsTextField);
+        slidersPanel.add(resetButton);
         slidersPanel.add(new JLabel("Separation"));
         slidersPanel.add(separationSlider);
         slidersPanel.add(new JLabel("Alignment"));
@@ -125,8 +129,8 @@ public class BoidsView {
         this.isRunning = false;
     }
 
-    private JButton makeButton() {
-        return new JButton(PLAY_STRING);
+    private JButton makeButton(String text) {
+        return new JButton(text);
     }
 
     private JSlider makeSlider() {
@@ -163,5 +167,13 @@ public class BoidsView {
 
     public int getNumberOfBoids() {
         return this.nBoids;
+    }
+
+    public boolean isResetButtonPressed() {
+        return isResetButtonPressed;
+    }
+
+    public void setRessedButtonUnpressed() {
+        this.isResetButtonPressed = false;
     }
 }
