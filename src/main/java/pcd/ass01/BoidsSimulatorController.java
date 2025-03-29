@@ -1,7 +1,6 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,27 +8,21 @@ public class BoidsSimulatorController {
 
     private final BoidsModel model;
     private Optional<BoidsView> view;
-    private final List<Worker> workers = Collections.synchronizedList(new ArrayList<>());
 
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
     private long t0;
-    private Monitor managerMonitor = new Monitor();
-    private Barrier calVelCycleBarrier;
-    private Barrier updVelCycleBarrier;
-    private Barrier updPosBarrier;
     private boolean isTime0Updated = false;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
-        initWorkers();
+        initTasks();
     }
 
-    private void initWorkers() {
-        workers.clear();
+    private void initTasks() {
 
         List<List<Boid>> partitions = new ArrayList<>();
         for (int i = 0; i < N_WORKERS; i++) {
@@ -45,55 +38,24 @@ public class BoidsSimulatorController {
             i++;
         }
 
-        managerMonitor = new Monitor();
-        calVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
-        updVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
-        updPosBarrier = new BarrierImpl(N_WORKERS);
-
-        i = 0;
-        for (List<Boid> part : partitions) {
-            workers.add(new Worker("W" + i,
-                    part,
-                    model,
-                    managerMonitor,
-                    calVelCycleBarrier,
-                    updVelCycleBarrier,
-                    updPosBarrier
-            ));
-            i++;
-        }
-
-
-        startWorkers();
-    }
-
-    private void startWorkers() {
-        workers.forEach(Worker::start);
     }
 
     public void attachView(BoidsView view) {
-    	this.view = Optional.of(view);
+        this.view = Optional.of(view);
     }
 
     public void runSimulation() {
         while (true) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    managerMonitor.startWork();
-                    updateTime0();
-                    if (updPosBarrier.isBroken()) {
-                        view.get().update(framerate);
-                        updateFrameRate(t0);
-                        updPosBarrier.reset();
-                    }
+
                 } else {
-                    managerMonitor.stopWork();
+
                 }
                 if (view.get().isResetButtonPressed()) {
-                    managerMonitor.stopWork();
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
-                    initWorkers();
+                    initTasks();
                     view.get().setResetButtonUnpressed();
                 }
             }
