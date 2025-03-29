@@ -3,7 +3,6 @@ package pcd.ass01;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CyclicBarrier;
 
 public class BoidsSimulatorController {
 
@@ -15,18 +14,13 @@ public class BoidsSimulatorController {
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
-    private final CyclicBarrier calculateVelocityBarrier = new CyclicBarrier(N_WORKERS);
-    private final CyclicBarrier updateVelocityBarrier = new CyclicBarrier(N_WORKERS);
     private long t0;
-    private final ManagerMonitor managerMonitor = new ManagerMonitor(N_WORKERS);
-    private boolean workersWorking;
-    private volatile boolean run = true;
+    private final Monitor playMonitor = new Monitor();
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
         initWorkers();
-        view.ifPresent(boidsView -> workersWorking = boidsView.isRunning());
     }
 
     private void initWorkers() {
@@ -51,10 +45,8 @@ public class BoidsSimulatorController {
             workers.add(new Worker("W" + i,
                     part,
                     model,
-                    calculateVelocityBarrier,
-                    updateVelocityBarrier,
-                    managerMonitor,
-                    workersWorking));
+                    playMonitor
+            ));
             i++;
         }
         startWorkers();
@@ -69,42 +61,23 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (run) {
+        while (true) {
+            synchronized (System.out) {
+            }
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    resumeWork();
-                    if (managerMonitor.isAllWorkComplete()) {
-                        view.get().update(framerate);
-                        managerMonitor.resetWorksCounter();
-                        updateFrameRate(t0);
-                        workersWorking = false;
-                    }
+                    playMonitor.startWork();
+                    view.get().update(framerate);
                 } else {
-                    pauseWork();
+                    playMonitor.stopWork();
                 }
                 if (view.get().isResetButtonPressed()) {
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
                     initWorkers();
-                    workersWorking = false;
-                    view.get().setRessedButtonUnpressed();
+                    view.get().setResetButtonUnpressed();
                 }
             }
-        }
-    }
-
-    private void pauseWork() {
-        if (workersWorking) {
-            workers.forEach(Worker::pauseWorker);
-            workersWorking = false;
-        }
-    }
-
-    private void resumeWork() {
-        if (!workersWorking) {
-            t0 = System.currentTimeMillis();
-            workers.forEach(Worker::resumeWorker);
-            workersWorking = true;
         }
     }
 

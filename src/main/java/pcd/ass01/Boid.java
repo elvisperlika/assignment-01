@@ -85,7 +85,7 @@ public class Boid {
         }
     }
     
-    public void updatePos(BoidsModel model) {
+    public void updatePosition(BoidsModel model) {
 
         /* Update position */
 

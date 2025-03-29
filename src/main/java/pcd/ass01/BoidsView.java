@@ -173,7 +173,7 @@ public class BoidsView {
         return isResetButtonPressed;
     }
 
-    public void setRessedButtonUnpressed() {
+    public void setResetButtonUnpressed() {
         this.isResetButtonPressed = false;
     }
 }
