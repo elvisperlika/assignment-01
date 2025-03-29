@@ -1,6 +1,7 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,14 +9,18 @@ public class BoidsSimulatorController {
 
     private final BoidsModel model;
     private Optional<BoidsView> view;
-    private final List<Worker> workers = new ArrayList<>();
+    private final List<Worker> workers = Collections.synchronizedList(new ArrayList<>());
 
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
     private long t0;
-    private final Monitor playMonitor = new Monitor();
+    private Monitor managerMonitor = new Monitor();
+    private Barrier calVelCycleBarrier;
+    private Barrier updVelCycleBarrier;
+    private Barrier updPosBarrier;
+    private boolean isTime0Updated = false;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -40,15 +45,25 @@ public class BoidsSimulatorController {
             i++;
         }
 
+        managerMonitor = new Monitor();
+        calVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
+        updVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
+        updPosBarrier = new BarrierImpl(N_WORKERS);
+
         i = 0;
         for (List<Boid> part : partitions) {
             workers.add(new Worker("W" + i,
                     part,
                     model,
-                    playMonitor
+                    managerMonitor,
+                    calVelCycleBarrier,
+                    updVelCycleBarrier,
+                    updPosBarrier
             ));
             i++;
         }
+
+
         startWorkers();
     }
 
@@ -62,16 +77,20 @@ public class BoidsSimulatorController {
 
     public void runSimulation() {
         while (true) {
-            synchronized (System.out) {
-            }
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    playMonitor.startWork();
-                    view.get().update(framerate);
+                    managerMonitor.startWork();
+                    updateTime0();
+                    if (updPosBarrier.isBroken()) {
+                        view.get().update(framerate);
+                        updateFrameRate(t0);
+                        updPosBarrier.reset();
+                    }
                 } else {
-                    playMonitor.stopWork();
+                    managerMonitor.stopWork();
                 }
                 if (view.get().isResetButtonPressed()) {
+                    managerMonitor.stopWork();
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
                     initWorkers();
@@ -81,7 +100,15 @@ public class BoidsSimulatorController {
         }
     }
 
+    private void updateTime0() {
+        if (!isTime0Updated) {
+            t0 = System.currentTimeMillis();
+            isTime0Updated = true;
+        }
+    }
+
     private void updateFrameRate(long t0) {
+        isTime0Updated = false;
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
         var frameratePeriod = 1000 / FRAMERATE;

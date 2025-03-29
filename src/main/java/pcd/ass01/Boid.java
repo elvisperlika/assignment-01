@@ -111,7 +111,7 @@ public class Boid {
         		}
         	}
         }
-        return list;
+        return new ArrayList<>(list);
     }
     
     private V2d calculateAlignment(List<Boid> nearbyBoids, BoidsModel model) {

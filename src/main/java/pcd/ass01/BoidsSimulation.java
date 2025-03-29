@@ -17,8 +17,8 @@ public class BoidsSimulation {
     static final double AVOID_RADIUS = 20.0;
 
 	static final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final static int SCREEN_WIDTH = screenSize.width;
-	final static int SCREEN_HEIGHT = screenSize.height;
+	final static int SCREEN_WIDTH = 1400;
+	final static int SCREEN_HEIGHT = 600;
 	
 
     public static void main(String[] args) {      

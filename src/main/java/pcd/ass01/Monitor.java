@@ -22,8 +22,8 @@ public class Monitor {
 
     public synchronized void stopWork() {
         if (working) {
-            System.out.println("STOP");
             working = false;
         }
     }
+
 }
