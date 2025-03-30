@@ -70,6 +70,7 @@ public class BoidsView {
         resetButton = makeButton(RESET_STRING);
         resetButton.addActionListener(e -> {
             this.isResetButtonPressed = true;
+            nBoidsTextField.setForeground(Color.BLACK);
         });
 
 

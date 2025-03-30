@@ -1,8 +1,10 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.*;
 
 public class BoidsSimulatorController {
 
@@ -15,6 +17,11 @@ public class BoidsSimulatorController {
     private final int N_WORKERS = CORES + 1;
     private long t0;
     private boolean isTime0Updated = false;
+    private ForkJoinPool pool;
+    List<Callable<Void>> calculateVelocityTaskList = new ArrayList<>();
+    List<Callable<Void>> updateVelocityTaskList = new ArrayList<>();
+    List<Callable<Void>> updatePositionTaskList = new ArrayList<>();
+    private volatile boolean loop = true ;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -23,21 +30,13 @@ public class BoidsSimulatorController {
     }
 
     private void initTasks() {
-
-        List<List<Boid>> partitions = new ArrayList<>();
-        for (int i = 0; i < N_WORKERS; i++) {
-            partitions.add(new ArrayList<>());
-        }
-
-        int i = 0;
-        for (Boid boid : model.getBoids()) {
-            if (i == partitions.size()) {
-                i = 0;
-            }
-            partitions.get(i).add(boid);
-            i++;
-        }
-
+        var boids = model.getBoids();
+        pool = new ForkJoinPool(N_WORKERS);
+        boids.forEach(boid -> {
+            calculateVelocityTaskList.add(new Task(boid, model, Boid::calculateVelocity));
+            updateVelocityTaskList.add(new Task(boid, model, Boid::updateVelocity));
+            updatePositionTaskList.add(new Task(boid, model, Boid::updatePosition));
+        });
     }
 
     public void attachView(BoidsView view) {
@@ -45,12 +44,27 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (true) {
+        while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-
-                } else {
-
+                    t0 = System.currentTimeMillis();
+                    try {
+                        pool.invokeAll(calculateVelocityTaskList);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        pool.invokeAll(updateVelocityTaskList);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        pool.invokeAll(updatePositionTaskList);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    view.get().update(framerate);
+                    updateFrameRate(t0);
                 }
                 if (view.get().isResetButtonPressed()) {
                     model.resetBoids(view.get().getNumberOfBoids());
