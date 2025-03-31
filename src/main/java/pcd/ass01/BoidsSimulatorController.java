@@ -1,7 +1,6 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
@@ -14,28 +13,46 @@ public class BoidsSimulatorController {
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES + 1;
     private long t0;
     private boolean isTime0Updated = false;
-    private ForkJoinPool pool;
-    List<Callable<Void>> calculateVelocityTaskList = new ArrayList<>();
-    List<Callable<Void>> updateVelocityTaskList = new ArrayList<>();
-    List<Callable<Void>> updatePositionTaskList = new ArrayList<>();
     private volatile boolean loop = true ;
+    private List<Thread> virtualThread;
+    private Monitor managerMonitor;
+    private Barrier calVelCycleBarrier;
+    private Barrier updVelCycleBarrier;
+    private Barrier updPosBarrier;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
-        initTasks();
+        initTasksAndVirtualThreads();
     }
 
-    private void initTasks() {
+    private void initTasksAndVirtualThreads() {
         var boids = model.getBoids();
-        pool = new ForkJoinPool(N_WORKERS);
+        var boidsSize = boids.size();
+        managerMonitor = new Monitor();
+        calVelCycleBarrier = new CycleBarrierImpl(boidsSize);
+        updVelCycleBarrier = new CycleBarrierImpl(boidsSize);
+        updPosBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 (the main)
+
         boids.forEach(boid -> {
-            calculateVelocityTaskList.add(new Task(boid, model, Boid::calculateVelocity));
-            updateVelocityTaskList.add(new Task(boid, model, Boid::updateVelocity));
-            updatePositionTaskList.add(new Task(boid, model, Boid::updatePosition));
+            Thread t = Thread.ofVirtual().unstarted(() -> {
+                while (loop) {
+                    try {
+                        managerMonitor.waitUntilWorkStart();
+                        boid.calculateVelocity(model);
+                        calVelCycleBarrier.await();
+                        boid.updateVelocity(model);
+                        updVelCycleBarrier.await();
+                        boid.updatePosition(model);
+                        updPosBarrier.await();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+            t.start();
         });
     }
 
@@ -47,29 +64,20 @@ public class BoidsSimulatorController {
         while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    t0 = System.currentTimeMillis();
-                    try {
-                        pool.invokeAll(calculateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
+                    updateTime0();
+                    managerMonitor.startWork();
+                    if (updPosBarrier.isBrokening()) {
+                        view.get().update(framerate);
+                        updateFrameRate(t0);
+                        updPosBarrier.await();
                     }
-                    try {
-                        pool.invokeAll(updateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        pool.invokeAll(updatePositionTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    view.get().update(framerate);
-                    updateFrameRate(t0);
+                } else {
+                    managerMonitor.stopWork();
                 }
                 if (view.get().isResetButtonPressed()) {
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
-                    initTasks();
+                    initTasksAndVirtualThreads();
                     view.get().setResetButtonUnpressed();
                 }
             }

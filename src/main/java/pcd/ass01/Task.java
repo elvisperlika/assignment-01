@@ -16,7 +16,7 @@ public class Task implements Callable<Void> {
     }
 
     @Override
-    public Void call() throws Exception {
+    public Void call() {
         function.accept(boid, model);
         return null;
     }
