@@ -1,20 +1,18 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 public class BoidsSimulatorController {
 
-    private final BoidsModel model;
-    private Optional<BoidsView> view;
-    private final List<Worker> workers = new ArrayList<>();
-
     private static final int FRAMERATE = 50;
-    private int framerate;
+    private final BoidsModel model;
+    private final List<Worker> workers = new ArrayList<>();
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
+    private Optional<BoidsView> view;
+    private int framerate;
     private long t0;
     private Monitor managerMonitor = new Monitor();
     private Barrier calVelCycleBarrier;
@@ -62,8 +60,6 @@ public class BoidsSimulatorController {
             ));
             i++;
         }
-
-
         startWorkers();
     }
 
@@ -72,7 +68,7 @@ public class BoidsSimulatorController {
     }
 
     public void attachView(BoidsView view) {
-    	this.view = Optional.of(view);
+        this.view = Optional.of(view);
     }
 
     public void runSimulation() {

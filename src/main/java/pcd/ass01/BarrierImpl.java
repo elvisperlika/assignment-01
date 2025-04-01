@@ -3,19 +3,19 @@ package pcd.ass01;
 public class BarrierImpl implements Barrier {
     protected final int parties;
     protected int count;
-    private boolean cond;
+    private boolean broken;
 
     public BarrierImpl(int parties) {
         this.parties = parties;
         this.count = 0;
-        this.cond = false;
+        this.broken = false;
     }
 
     @Override
     public synchronized void await() {
-        cond = false;
+        broken = false;
         count++;
-        while (count <= parties && !cond) {
+        while (count <= parties && !broken) {
             try {
                 wait();
             } catch (InterruptedException e) {
@@ -31,7 +31,7 @@ public class BarrierImpl implements Barrier {
     @Override
     public synchronized void reset() {
         count = 0;
-        cond = true;
+        broken = true;
         notifyAll();
     }
 

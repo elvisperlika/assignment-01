@@ -6,15 +6,15 @@ import java.util.List;
 
 public class BoidsModel {
 
-    private List<Boid> boids;
-    private double separationWeight;
-    private double alignmentWeight;
-    private double cohesionWeight;
     private final double width;
     private final double height;
     private final double maxSpeed;
     private final double perceptionRadius;
     private final double avoidRadius;
+    private List<Boid> boids;
+    private double separationWeight;
+    private double alignmentWeight;
+    private double cohesionWeight;
 
     public BoidsModel(int nBoids,
                       double initialSeparationWeight,
@@ -38,7 +38,7 @@ public class BoidsModel {
     }
 
     private List<Boid> generateBoids(int nBoids) {
-        List<Boid> boids = new ArrayList<Boid>();
+        List<Boid> boids = new ArrayList<>();
         for (int i = 0; i < nBoids; i++) {
             P2d pos = new P2d(-width / 2 + Math.random() * width, -height / 2 + Math.random() * height);
             V2d vel = new V2d(Math.random() * maxSpeed / 2 - maxSpeed / 4, Math.random() * maxSpeed / 2 - maxSpeed / 4);
@@ -75,28 +75,28 @@ public class BoidsModel {
         return height;
     }
 
-    public void setSeparationWeight(double value) {
-        this.separationWeight = value;
-    }
-
-    public void setAlignmentWeight(double value) {
-        this.alignmentWeight = value;
-    }
-
-    public void setCohesionWeight(double value) {
-        this.cohesionWeight = value;
-    }
-
     public double getSeparationWeight() {
         return separationWeight;
+    }
+
+    public void setSeparationWeight(double value) {
+        this.separationWeight = value;
     }
 
     public double getCohesionWeight() {
         return cohesionWeight;
     }
 
+    public void setCohesionWeight(double value) {
+        this.cohesionWeight = value;
+    }
+
     public double getAlignmentWeight() {
         return alignmentWeight;
+    }
+
+    public void setAlignmentWeight(double value) {
+        this.alignmentWeight = value;
     }
 
     public double getMaxSpeed() {

@@ -7,9 +7,9 @@ public class Worker extends Thread {
     private final List<Boid> boidsPartition;
     private final BoidsModel model;
     private final Monitor monitor;
-    private Barrier calVelBarrier;
     private final Barrier updVelBarrier;
     private final Barrier updPosBarrier;
+    private final Barrier calVelBarrier;
 
     public Worker(String name,
                   List<Boid> boidsPartition,
@@ -30,18 +30,18 @@ public class Worker extends Thread {
     public void run() {
         while (true) {
             monitor.waitUntilWorkStart();
-            calculateVelocityAndWaitBarrier();
-            updateVelocityAndWaitBarrier();
+            calculateVelocityAndWaitCycleBarrier();
+            updateVelocityAndWaitCycleBarrier();
             updatePositionAndWaitBarrier();
         }
     }
 
-    private void calculateVelocityAndWaitBarrier() {
+    private void calculateVelocityAndWaitCycleBarrier() {
         boidsPartition.forEach(boid -> boid.calculateVelocity(model));
         calVelBarrier.await();
     }
 
-    private void updateVelocityAndWaitBarrier() {
+    private void updateVelocityAndWaitCycleBarrier() {
         boidsPartition.forEach(boid -> boid.updateVelocity(model));
         updVelBarrier.await();
     }

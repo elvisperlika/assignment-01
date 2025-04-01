@@ -10,13 +10,16 @@ public class BoidsView {
     private static final String PLAY_STRING = "PLAY";
     private static final String RESET_STRING = "RESET";
     private final JButton resetButton;
-    private JFrame frame;
-    private BoidsPanel boidsPanel;
-    private JSlider cohesionSlider, separationSlider, alignmentSlider;
-    private JTextField nBoidsTextField;
-    private JButton playButton;
-    private BoidsModel model;
-    private int width, height;
+    private final JFrame frame;
+    private final BoidsPanel boidsPanel;
+    private final JSlider cohesionSlider;
+    private final JSlider separationSlider;
+    private final JSlider alignmentSlider;
+    private final JTextField nBoidsTextField;
+    private final JButton playButton;
+    private final BoidsModel model;
+    private final int width;
+    private final int height;
     private boolean isRunning = false;
     private int nBoids;
     private boolean isResetButtonPressed = false;
@@ -55,7 +58,11 @@ public class BoidsView {
             }
         });
 
-        playButton = makeButton(PLAY_STRING);
+        if (isRunning) {
+            playButton = new JButton(PAUSE_STRING);
+        } else {
+            playButton = new JButton(PLAY_STRING);
+        }
         playButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
@@ -69,6 +76,7 @@ public class BoidsView {
 
         resetButton = makeButton(RESET_STRING);
         resetButton.addActionListener(e -> {
+            nBoidsTextField.setForeground(Color.BLACK);
             this.isResetButtonPressed = true;
         });
 
