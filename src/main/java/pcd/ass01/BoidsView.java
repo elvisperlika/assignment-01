@@ -77,6 +77,7 @@ public class BoidsView {
             nBoidsTextField.setForeground(Color.BLACK);
         });
 
+
         separationSlider = makeSlider();
         separationSlider.addChangeListener(l -> {
             var val = separationSlider.getValue();
@@ -98,7 +99,6 @@ public class BoidsView {
         slidersPanel.add(playButton);
         slidersPanel.add(new JLabel("Set size end press Enter"));
         slidersPanel.add(nBoidsTextField);
-        slidersPanel.add(new JLabel("is better to Pause before"));
         slidersPanel.add(resetButton);
         slidersPanel.add(new JLabel("Separation"));
         slidersPanel.add(separationSlider);
