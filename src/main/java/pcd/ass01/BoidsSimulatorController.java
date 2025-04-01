@@ -22,6 +22,9 @@ public class BoidsSimulatorController {
     List<Callable<Void>> updateVelocityTaskList = new ArrayList<>();
     List<Callable<Void>> updatePositionTaskList = new ArrayList<>();
     private volatile boolean loop = true ;
+    private int i = 0;
+    private int N_LOOP = 100;
+    private final List<Long> deltaTimes = new ArrayList<>();
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -44,37 +47,42 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (loop) {
-            if (view.isPresent()) {
-                if (view.get().isRunning()) {
-                    t0 = System.currentTimeMillis();
-                    try {
-                        pool.invokeAll(calculateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        pool.invokeAll(updateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        pool.invokeAll(updatePositionTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    view.get().update(framerate);
-                    updateFrameRate(t0);
-                }
-                if (view.get().isResetButtonPressed()) {
-                    model.resetBoids(view.get().getNumberOfBoids());
-                    view.get().update(framerate);
-                    initTasks();
-                    view.get().setResetButtonUnpressed();
-                }
+        while (i < N_LOOP) {
+            updateTime0();
+            try {
+                pool.invokeAll(calculateVelocityTaskList);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
+            try {
+                pool.invokeAll(updateVelocityTaskList);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                pool.invokeAll(updatePositionTaskList);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            // view.get().update(framerate);
+            updateFrameRate(t0);
+            i++;
+
+//            if (view.isPresent()) {
+//                if (view.get().isRunning()) {
+//                    t0 = System.currentTimeMillis();
+//                }
+//                if (view.get().isResetButtonPressed()) {
+//                    model.resetBoids(view.get().getNumberOfBoids());
+//                    view.get().update(framerate);
+//                    initTasks();
+//                    view.get().setResetButtonUnpressed();
+//                }
+//            }
         }
+        System.out.println("Mean Delta Time in ms: " + deltaTimes.stream().mapToLong(a -> a).average().orElse(0.0));
     }
+
 
     private void updateTime0() {
         if (!isTime0Updated) {
@@ -87,6 +95,7 @@ public class BoidsSimulatorController {
         isTime0Updated = false;
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
+        deltaTimes.add(dtElapsed);
         var frameratePeriod = 1000 / FRAMERATE;
         if (dtElapsed < frameratePeriod) {
             try {
