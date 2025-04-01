@@ -55,7 +55,11 @@ public class BoidsView {
             }
         });
 
-        playButton = makeButton(PLAY_STRING);
+        if (isRunning) {
+            playButton = new JButton(PAUSE_STRING);
+        } else {
+            playButton = new JButton(PLAY_STRING);
+        }
         playButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
@@ -72,7 +76,6 @@ public class BoidsView {
             this.isResetButtonPressed = true;
             nBoidsTextField.setForeground(Color.BLACK);
         });
-
 
         separationSlider = makeSlider();
         separationSlider.addChangeListener(l -> {
@@ -95,6 +98,7 @@ public class BoidsView {
         slidersPanel.add(playButton);
         slidersPanel.add(new JLabel("Set size end press Enter"));
         slidersPanel.add(nBoidsTextField);
+        slidersPanel.add(new JLabel("is better to Pause before"));
         slidersPanel.add(resetButton);
         slidersPanel.add(new JLabel("Separation"));
         slidersPanel.add(separationSlider);

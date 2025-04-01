@@ -16,7 +16,6 @@ public class BoidsSimulatorController {
     private long t0;
     private boolean isTime0Updated = false;
     private volatile boolean loop = true ;
-    private List<Thread> virtualThread;
     private Monitor managerMonitor;
     private Barrier calVelCycleBarrier;
     private Barrier updVelCycleBarrier;
@@ -34,7 +33,7 @@ public class BoidsSimulatorController {
         managerMonitor = new Monitor();
         calVelCycleBarrier = new CycleBarrierImpl(boidsSize);
         updVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updPosBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 (the main)
+        updPosBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 is the Main Thread
 
         boids.forEach(boid -> {
             Thread t = Thread.ofVirtual().unstarted(() -> {
@@ -75,8 +74,8 @@ public class BoidsSimulatorController {
                     managerMonitor.stopWork();
                 }
                 if (view.get().isResetButtonPressed()) {
+                    managerMonitor.stopWork();
                     model.resetBoids(view.get().getNumberOfBoids());
-                    view.get().update(framerate);
                     initTasksAndVirtualThreads();
                     view.get().setResetButtonUnpressed();
                 }
