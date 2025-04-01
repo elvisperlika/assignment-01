@@ -96,16 +96,16 @@ public class BoidsSimulatorController {
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
         deltaTimes.add(dtElapsed);
-        var frameratePeriod = 1000 / FRAMERATE;
-        if (dtElapsed < frameratePeriod) {
-            try {
-                Thread.sleep(frameratePeriod - dtElapsed);
-            } catch (Exception ex) {
-                System.out.println(ex);
-            }
-            framerate = FRAMERATE;
-        } else {
-            framerate = (int) (1000 / dtElapsed);
-        }
+//        var frameratePeriod = 1000 / FRAMERATE;
+//        if (dtElapsed < frameratePeriod) {
+//            try {
+//                Thread.sleep(frameratePeriod - dtElapsed);
+//            } catch (Exception ex) {
+//                System.out.println(ex);
+//            }
+//            framerate = FRAMERATE;
+//        } else {
+//            framerate = (int) (1000 / dtElapsed);
+//        }
     }
 }
