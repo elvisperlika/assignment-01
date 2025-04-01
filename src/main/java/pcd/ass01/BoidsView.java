@@ -55,7 +55,11 @@ public class BoidsView {
             }
         });
 
-        playButton = makeButton(PLAY_STRING);
+        if (isRunning) {
+            playButton = makeButton(PLAY_STRING);
+        } else {
+            playButton = makeButton(PAUSE_STRING);
+        }
         playButton.addActionListener(e -> {
             if (isRunning) {
                 pause();
@@ -72,7 +76,6 @@ public class BoidsView {
             this.isResetButtonPressed = true;
             nBoidsTextField.setForeground(Color.BLACK);
         });
-
 
         separationSlider = makeSlider();
         separationSlider.addChangeListener(l -> {

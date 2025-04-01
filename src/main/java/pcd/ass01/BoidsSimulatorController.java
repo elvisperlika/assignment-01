@@ -16,7 +16,6 @@ public class BoidsSimulatorController {
     private long t0;
     private boolean isTime0Updated = false;
     private volatile boolean loop = true ;
-    private List<Thread> virtualThread;
     private Monitor managerMonitor;
     private Barrier calVelCycleBarrier;
     private Barrier updVelCycleBarrier;
