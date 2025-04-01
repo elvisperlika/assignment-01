@@ -20,6 +20,9 @@ public class BoidsSimulatorController {
     private Barrier calVelCycleBarrier;
     private Barrier updVelCycleBarrier;
     private Barrier updPosBarrier;
+    private volatile int i = 0;
+    private int N_LOOP = 100;
+    private final List<Long> deltaTimes = new ArrayList<>();
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -60,27 +63,30 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (loop) {
-            if (view.isPresent()) {
-                if (view.get().isRunning()) {
-                    updateTime0();
-                    managerMonitor.startWork();
-                    if (updPosBarrier.isBrokening()) {
-                        view.get().update(framerate);
-                        updateFrameRate(t0);
-                        updPosBarrier.await();
-                    }
-                } else {
-                    managerMonitor.stopWork();
-                }
-                if (view.get().isResetButtonPressed()) {
-                    managerMonitor.stopWork();
-                    model.resetBoids(view.get().getNumberOfBoids());
-                    initTasksAndVirtualThreads();
-                    view.get().setResetButtonUnpressed();
-                }
+        while (i < N_LOOP) {
+            updateTime0();
+            managerMonitor.startWork();
+            if (updPosBarrier.isBrokening()) {
+                // view.get().update(framerate);
+                updateFrameRate(t0);
+                i++;
+                updPosBarrier.await();
             }
+//            if (view.isPresent()) {
+//                if (view.get().isRunning()) {
+//                } else {
+//                    managerMonitor.stopWork();
+//                }
+//                if (view.get().isResetButtonPressed()) {
+//                    managerMonitor.stopWork();
+//                    model.resetBoids(view.get().getNumberOfBoids());
+//                    initTasksAndVirtualThreads();
+//                    view.get().setResetButtonUnpressed();
+//                }
+//            }
         }
+        System.out.println("Mean Delta Time in ms: " + deltaTimes.stream().mapToLong(a -> a).average().orElse(0.0));
+        System.exit(-1);
     }
 
     private void updateTime0() {
@@ -94,6 +100,7 @@ public class BoidsSimulatorController {
         isTime0Updated = false;
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
+        deltaTimes.add(dtElapsed);
         var frameratePeriod = 1000 / FRAMERATE;
         if (dtElapsed < frameratePeriod) {
             try {
