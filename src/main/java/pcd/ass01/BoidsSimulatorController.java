@@ -3,10 +3,10 @@ package pcd.ass01;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
 
 public class BoidsSimulatorController {
 
+    private static final int N_LOOP = 1_500;
     private final BoidsModel model;
     private Optional<BoidsView> view;
 
@@ -21,6 +21,7 @@ public class BoidsSimulatorController {
     private CycleBarrier updateVelocityCycleBarrier;
     private CycleBarrier updatePositionCycleBarrier;
     private List<Thread> virtualThreads;
+    private int i = 0;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -43,13 +44,10 @@ public class BoidsSimulatorController {
                 while (loop) {
                     try {
                         managerMonitor.waitUntilWorkStart();
-                        System.out.println("CAL");
                         boid.calculateVelocity(model);
                         calculateVelocityCycleBarrier.await();
-                        System.out.println("VEL-2");
                         boid.updateVelocity(model);
                         updateVelocityCycleBarrier.await();
-                        System.out.println("POS");
                         boid.updatePosition(model);
                         updatePositionCycleBarrier.await();
                     } catch (Exception e) {
@@ -59,7 +57,6 @@ public class BoidsSimulatorController {
             });
             virtualThreads.add(t);
         });
-        System.out.println("CREATI: " +  virtualThreads.size());
         virtualThreads.forEach(Thread::start);
     }
 
@@ -68,26 +65,11 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (loop) {
-            if (view.isPresent()) {
-                if (view.get().isRunning()) {
-                    managerMonitor.startWork();
-                    updateTime0();
-                    if (updatePositionCycleBarrier.isBrokening()) {
-                        view.get().update(framerate);
-                        updateFrameRate(t0);
-                        updatePositionCycleBarrier.await();
-                    }
-                } else {
-                    managerMonitor.stopWork();
-                }
-                if (view.get().isResetButtonPressed()) {
-                    managerMonitor.stopWork();
-                    model.resetBoids(view.get().getNumberOfBoids());
-                    view.get().update(framerate);
-                    initVirtualThreads();
-                    view.get().setResetButtonUnpressed();
-                }
+        while (i < N_LOOP) {
+            managerMonitor.startWork();
+            if (updatePositionCycleBarrier.isBrokening()) {
+                updatePositionCycleBarrier.await();
+                i++;
             }
         }
     }
