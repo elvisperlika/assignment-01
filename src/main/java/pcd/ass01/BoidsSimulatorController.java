@@ -70,31 +70,29 @@ public class BoidsSimulatorController {
     }
 
     public void attachView(BoidsView view) {
-        this.view = Optional.of(view);
+        // this.view = Optional.of(view);
     }
 
     public void runSimulation() {
-        while (true) {
-            if (view.isPresent()) {
-                if (view.get().isRunning()) {
-                    managerMonitor.startWork();
-                    updateTime0();
-                    if (updatePositionCycleBarrier.isBrokening()) {
-                        view.get().update(framerate);
-                        updateFrameRate(t0);
-                        updatePositionCycleBarrier.await();
-                    }
-                } else {
-                    managerMonitor.stopWork();
-                }
-                if (view.get().isResetButtonPressed()) {
-                    managerMonitor.stopWork();
-                    model.resetBoids(view.get().getNumberOfBoids());
-                    view.get().update(framerate);
-                    initWorkers();
-                    view.get().setResetButtonUnpressed();
-                }
+        while (i < N_LOOP) {
+            managerMonitor.startWork();
+            if (updatePositionCycleBarrier.isBrokening()) {
+                i++;
+                updatePositionCycleBarrier.await();
             }
+//            if (view.isPresent()) {
+//                if (view.get().isRunning()) {
+//                } else {
+//                    managerMonitor.stopWork();
+//                }
+//                if (view.get().isResetButtonPressed()) {
+//                    managerMonitor.stopWork();
+//                    model.resetBoids(view.get().getNumberOfBoids());
+//                    view.get().update(framerate);
+//                    initWorkers();
+//                    view.get().setResetButtonUnpressed();
+//                }
+//            }
         }
     }
 
