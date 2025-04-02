@@ -6,26 +6,25 @@ import java.util.Optional;
 
 public class BoidsSimulatorController {
 
-    private static final int FRAMERATE = 50;
+    // private static final int FRAMERATE = 50;
     private final BoidsModel model;
     private final List<Worker> workers = new ArrayList<>();
-    private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES + 1;
-    private Optional<BoidsView> view;
-    private int framerate;
-    private long t0;
+    // private final int CORES = Runtime.getRuntime().availableProcessors();
+    private final int N_WORKERS = 8;
+//    private Optional<BoidsView> view;
+//    private int framerate;
+//    private long t0;
     private Monitor managerMonitor = new Monitor();
     private Barrier calVelCycleBarrier;
     private Barrier updVelCycleBarrier;
     private Barrier updPosBarrier;
     private boolean isTime0Updated = false;
     private int i = 0;
-    private int N_LOOP = 100;
-    private final List<Long> deltaTimes = new ArrayList<>();
+    private int N_LOOP = 1_500;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
-        view = Optional.empty();
+        // view = Optional.empty();
         initWorkers();
     }
 
@@ -71,18 +70,16 @@ public class BoidsSimulatorController {
     }
 
     public void attachView(BoidsView view) {
-        this.view = Optional.of(view);
+        // this.view = Optional.of(view);
     }
 
     public void runSimulation() {
         while (i < N_LOOP) {
             managerMonitor.startWork();
-            updateTime0();
+//            updateTime0();
             if (updPosBarrier.isBroken()) {
-                // view.get().update(framerate);
-                updateFrameRate(t0);
-                i++;
                 updPosBarrier.reset();
+                i++;
             }
 
 
@@ -101,21 +98,20 @@ public class BoidsSimulatorController {
 //                }
 //            }
         }
-        System.out.println("Mean Delta Time in ms: " + deltaTimes.stream().mapToLong(a -> a).average().orElse(0.0));
     }
 
     private void updateTime0() {
         if (!isTime0Updated) {
-            t0 = System.currentTimeMillis();
+            // t0 = System.currentTimeMillis();
             isTime0Updated = true;
         }
     }
 
-    private void updateFrameRate(long t0) {
-        isTime0Updated = false;
-        var t1 = System.currentTimeMillis();
-        var dtElapsed = t1 - t0;
-        deltaTimes.add(dtElapsed);
+//    private void updateFrameRate(long t0) {
+//        isTime0Updated = false;
+//        var t1 = System.currentTimeMillis();
+//        var dtElapsed = t1 - t0;
+//        deltaTimes.add(dtElapsed);
 //        var frameratePeriod = 1000 / FRAMERATE;
 //        if (dtElapsed < frameratePeriod) {
 //            try {
@@ -127,5 +123,5 @@ public class BoidsSimulatorController {
 //        } else {
 //            framerate = (int) (1000 / dtElapsed);
 //        }
-    }
+//    }
 }

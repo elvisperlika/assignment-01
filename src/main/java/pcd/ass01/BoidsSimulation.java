@@ -4,7 +4,7 @@ import java.awt.*;
 
 public class BoidsSimulation {
 
-    final static int N_BOIDS = 10_000;
+    final static int N_BOIDS = 1_500;
 
     final static double SEPARATION_WEIGHT = 1.0;
     final static double ALIGNMENT_WEIGHT = 1.0;
@@ -29,9 +29,12 @@ public class BoidsSimulation {
                 MAX_SPEED,
                 PERCEPTION_RADIUS,
                 AVOID_RADIUS);
+        var t0 = System.currentTimeMillis();
         var sim = new BoidsSimulatorController(model);
         // var view = new BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT, N_BOIDS);
         // sim.attachView(view);
         sim.runSimulation();
+        var t1 = System.currentTimeMillis();
+        System.out.println("DT: " + (t1 - t0));
     }
 }
