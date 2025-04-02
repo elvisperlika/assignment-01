@@ -9,36 +9,36 @@ public class Monitor {
     private final Condition cond = mutex.newCondition();
 
     public void waitUntilWorkStart() {
+        mutex.lock();
         if (!working) {
             try {
-                mutex.lock();
                 cond.await();
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } finally {
-                mutex.unlock();
             }
         }
+        mutex.unlock();
     }
 
     public void startWork() {
+        mutex.lock();
         if (!working) {
             working = true;
-            mutex.lock();
             try {
                 cond.signalAll();
             } finally {
-                mutex.unlock();
             }
         }
+        mutex.unlock();
     }
 
     public void stopWork() {
+        mutex.lock();
         if (working) {
-            mutex.lock();
             working = false;
-            mutex.unlock();
         }
+        mutex.unlock();
     }
 
 }

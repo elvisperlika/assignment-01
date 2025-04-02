@@ -1,9 +1,6 @@
 package pcd.ass01;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.*;
 
 public class BoidsSimulatorController {
 
@@ -17,9 +14,9 @@ public class BoidsSimulatorController {
     private boolean isTime0Updated = false;
     private volatile boolean loop = true ;
     private Monitor managerMonitor;
-    private Barrier calVelCycleBarrier;
-    private Barrier updVelCycleBarrier;
-    private Barrier updPosBarrier;
+    private CycleBarrier calVelCycleBarrier;
+    private CycleBarrier updVelCycleBarrier;
+    private CycleBarrier updPosCycleBarrier;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -33,7 +30,7 @@ public class BoidsSimulatorController {
         managerMonitor = new Monitor();
         calVelCycleBarrier = new CycleBarrierImpl(boidsSize);
         updVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updPosBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 is the Main Thread
+        updPosCycleBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 is the Main Thread
 
         boids.forEach(boid -> {
             Thread t = Thread.ofVirtual().unstarted(() -> {
@@ -45,7 +42,7 @@ public class BoidsSimulatorController {
                         boid.updateVelocity(model);
                         updVelCycleBarrier.await();
                         boid.updatePosition(model);
-                        updPosBarrier.await();
+                        updPosCycleBarrier.await();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -60,15 +57,16 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (loop) {
+        while (true) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    updateTime0();
                     managerMonitor.startWork();
-                    if (updPosBarrier.isBrokening()) {
+                    updateTime0();
+                    if (updPosCycleBarrier.isBrokening()) {
+                        managerMonitor.stopWork();
                         view.get().update(framerate);
                         updateFrameRate(t0);
-                        updPosBarrier.await();
+                        updPosCycleBarrier.await();
                     }
                 } else {
                     managerMonitor.stopWork();
@@ -76,6 +74,7 @@ public class BoidsSimulatorController {
                 if (view.get().isResetButtonPressed()) {
                     managerMonitor.stopWork();
                     model.resetBoids(view.get().getNumberOfBoids());
+                    view.get().update(framerate);
                     initTasksAndVirtualThreads();
                     view.get().setResetButtonUnpressed();
                 }
