@@ -9,6 +9,7 @@ public class CycleBarrierImpl implements CycleBarrier {
     private final ReentrantLock mutex = new ReentrantLock();
     private final Condition cond = mutex.newCondition();
     private boolean broken = false;
+    private int generation = 0;
 
     public CycleBarrierImpl(int parties) {
         this.parties = parties;
@@ -19,14 +20,14 @@ public class CycleBarrierImpl implements CycleBarrier {
     public void await() {
         mutex.lock();
         try {
-            broken = false;
+            int currentGeneration = generation;
             count++;
             if (count == parties) {
-                broken = true;
+                generation++;
                 count = 0;
                 cond.signalAll();
             } else {
-                while (count < parties && !broken) {
+                while (currentGeneration == generation) {
                     try {
                         cond.await();
                     } catch (InterruptedException e) {

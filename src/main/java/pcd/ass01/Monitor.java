@@ -10,27 +10,31 @@ public class Monitor {
 
     public void waitUntilWorkStart() {
         mutex.lock();
-        if (!working) {
-            try {
+        try {
+            while (!working) {
                 cond.await();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            } finally {
-                mutex.unlock();
             }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            mutex.unlock();
         }
     }
 
     public void startWork() {
         mutex.lock();
-        if (!working) {
-            working = true;
-            try {
-                cond.signalAll();
-            } finally {
+        try {
+            if (!working) {
+                working = true;
+                try {
+                    cond.signalAll();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
+        } finally {
+            mutex.unlock();
         }
-        mutex.unlock();
     }
 
     public void stopWork() {

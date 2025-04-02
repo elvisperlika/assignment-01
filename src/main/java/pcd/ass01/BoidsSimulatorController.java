@@ -42,7 +42,7 @@ public class BoidsSimulatorController {
                 while (loop) {
                     try {
                         managerMonitor.waitUntilWorkStart();
-                        System.out.println("VEL");
+                        System.out.println("CAL");
                         boid.calculateVelocity(model);
                         calculateVelocityCycleBarrier.await();
                         System.out.println("VEL-2");
