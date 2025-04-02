@@ -15,9 +15,9 @@ public class BoidsSimulatorController {
     private int framerate;
     private long t0;
     private Monitor managerMonitor = new Monitor();
-    private Barrier calVelCycleBarrier;
-    private Barrier updVelCycleBarrier;
-    private Barrier updPosBarrier;
+    private CycleBarrier calculateVelocityCycleBarrier;
+    private CycleBarrier updateVelocityCycleBarrier;
+    private CycleBarrier updatePositionCycleBarrier;
     private boolean isTime0Updated = false;
 
     public BoidsSimulatorController(BoidsModel model) {
@@ -44,9 +44,9 @@ public class BoidsSimulatorController {
         }
 
         managerMonitor = new Monitor();
-        calVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
-        updVelCycleBarrier = new CycleBarrierImpl(N_WORKERS);
-        updPosBarrier = new BarrierImpl(N_WORKERS);
+        calculateVelocityCycleBarrier = new CycleBarrierImpl(N_WORKERS);
+        updateVelocityCycleBarrier = new CycleBarrierImpl(N_WORKERS);
+        updatePositionCycleBarrier = new CycleBarrierImpl(N_WORKERS + 1); // + 1 is the Main Thread
 
         i = 0;
         for (List<Boid> part : partitions) {
@@ -54,9 +54,9 @@ public class BoidsSimulatorController {
                     part,
                     model,
                     managerMonitor,
-                    calVelCycleBarrier,
-                    updVelCycleBarrier,
-                    updPosBarrier
+                    calculateVelocityCycleBarrier,
+                    updateVelocityCycleBarrier,
+                    updatePositionCycleBarrier
             ));
             i++;
         }
@@ -77,10 +77,10 @@ public class BoidsSimulatorController {
                 if (view.get().isRunning()) {
                     managerMonitor.startWork();
                     updateTime0();
-                    if (updPosBarrier.isBroken()) {
+                    if (updatePositionCycleBarrier.isBrokening()) {
                         view.get().update(framerate);
                         updateFrameRate(t0);
-                        updPosBarrier.reset();
+                        updatePositionCycleBarrier.await();
                     }
                 } else {
                     managerMonitor.stopWork();
