@@ -52,17 +52,20 @@ public class BoidsSimulatorController {
                         pool.invokeAll(calculateVelocityTaskList);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
+                    } finally {
+                        try {
+                            pool.invokeAll(updateVelocityTaskList);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        } finally {
+                            try {
+                                pool.invokeAll(updatePositionTaskList);
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
                     }
-                    try {
-                        pool.invokeAll(updateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        pool.invokeAll(updatePositionTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+
                     view.get().update(framerate);
                     updateFrameRate(t0);
                 }
