@@ -11,20 +11,20 @@ public class BoidsSimulatorController {
     private final BoidsModel model;
     private Optional<BoidsView> view;
 
-    private static final int FRAMERATE = 50;
-    private int framerate;
+//    private static final int FRAMERATE = 50;
+//    private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private final int N_WORKERS = CORES + 1;
-    private long t0;
-    private boolean isTime0Updated = false;
+//    private long t0;
+//    private boolean isTime0Updated = false;
     private ForkJoinPool pool;
     List<Callable<Void>> calculateVelocityTaskList = new ArrayList<>();
     List<Callable<Void>> updateVelocityTaskList = new ArrayList<>();
     List<Callable<Void>> updatePositionTaskList = new ArrayList<>();
-    private volatile boolean loop = true ;
+//    private volatile boolean loop = true ;
     private int i = 0;
-    private int N_LOOP = 100;
-    private final List<Long> deltaTimes = new ArrayList<>();
+    private int N_LOOP = 1_500;
+    // private final List<Long> deltaTimes = new ArrayList<>();
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -34,7 +34,7 @@ public class BoidsSimulatorController {
 
     private void initTasks() {
         var boids = model.getBoids();
-        pool = new ForkJoinPool(N_WORKERS);
+        pool = new ForkJoinPool();
         boids.forEach(boid -> {
             calculateVelocityTaskList.add(new Task(boid, model, Boid::calculateVelocity));
             updateVelocityTaskList.add(new Task(boid, model, Boid::updateVelocity));
@@ -43,12 +43,12 @@ public class BoidsSimulatorController {
     }
 
     public void attachView(BoidsView view) {
-        this.view = Optional.of(view);
+        // this.view = Optional.of(view);
     }
 
     public void runSimulation() {
         while (i < N_LOOP) {
-            updateTime0();
+            // updateTime0();
             try {
                 pool.invokeAll(calculateVelocityTaskList);
             } catch (Exception e) {
@@ -65,7 +65,7 @@ public class BoidsSimulatorController {
                 throw new RuntimeException(e);
             }
             // view.get().update(framerate);
-            updateFrameRate(t0);
+            // updateFrameRate(t0);
             i++;
 
 //            if (view.isPresent()) {
@@ -80,22 +80,21 @@ public class BoidsSimulatorController {
 //                }
 //            }
         }
-        System.out.println("Mean Delta Time in ms: " + deltaTimes.stream().mapToLong(a -> a).average().orElse(0.0));
     }
 
 
-    private void updateTime0() {
-        if (!isTime0Updated) {
-            t0 = System.currentTimeMillis();
-            isTime0Updated = true;
-        }
-    }
+//    private void updateTime0() {
+//        if (!isTime0Updated) {
+//            t0 = System.currentTimeMillis();
+//            isTime0Updated = true;
+//        }
+//    }
 
-    private void updateFrameRate(long t0) {
-        isTime0Updated = false;
-        var t1 = System.currentTimeMillis();
-        var dtElapsed = t1 - t0;
-        deltaTimes.add(dtElapsed);
+//    private void updateFrameRate(long t0) {
+//        isTime0Updated = false;
+//        var t1 = System.currentTimeMillis();
+//        var dtElapsed = t1 - t0;
+//        deltaTimes.add(dtElapsed);
 //        var frameratePeriod = 1000 / FRAMERATE;
 //        if (dtElapsed < frameratePeriod) {
 //            try {
@@ -107,5 +106,5 @@ public class BoidsSimulatorController {
 //        } else {
 //            framerate = (int) (1000 / dtElapsed);
 //        }
-    }
+//    }
 }
