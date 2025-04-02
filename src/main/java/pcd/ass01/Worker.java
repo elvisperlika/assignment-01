@@ -7,24 +7,24 @@ public class Worker extends Thread {
     private final List<Boid> boidsPartition;
     private final BoidsModel model;
     private final Monitor monitor;
-    private final Barrier updVelBarrier;
-    private final Barrier updPosBarrier;
-    private final Barrier calVelBarrier;
+    private final CycleBarrier updVelCycleBarrier;
+    private final CycleBarrier updPosCycleBarrier;
+    private final CycleBarrier calVelCycleBarrier;
 
     public Worker(String name,
                   List<Boid> boidsPartition,
                   BoidsModel model,
                   Monitor monitor,
-                  Barrier calVelBarrier,
-                  Barrier updVelBarrier,
-                  Barrier updPosBarrier) {
+                  CycleBarrier calVelCycleBarrier,
+                  CycleBarrier updVelCycleBarrier,
+                  CycleBarrier updPosCycleBarrier) {
         super(name);
         this.boidsPartition = boidsPartition;
         this.model = model;
         this.monitor = monitor;
-        this.calVelBarrier = calVelBarrier;
-        this.updVelBarrier = updVelBarrier;
-        this.updPosBarrier = updPosBarrier;
+        this.calVelCycleBarrier = calVelCycleBarrier;
+        this.updVelCycleBarrier = updVelCycleBarrier;
+        this.updPosCycleBarrier = updPosCycleBarrier;
     }
 
     public void run() {
@@ -38,17 +38,17 @@ public class Worker extends Thread {
 
     private void calculateVelocityAndWaitCycleBarrier() {
         boidsPartition.forEach(boid -> boid.calculateVelocity(model));
-        calVelBarrier.await();
+        calVelCycleBarrier.await();
     }
 
     private void updateVelocityAndWaitCycleBarrier() {
         boidsPartition.forEach(boid -> boid.updateVelocity(model));
-        updVelBarrier.await();
+        updVelCycleBarrier.await();
     }
 
     private void updatePositionAndWaitBarrier() {
         boidsPartition.forEach(boid -> boid.updatePosition(model));
-        updPosBarrier.await();
+        updPosCycleBarrier.await();
     }
 
     private void log(String msg) {

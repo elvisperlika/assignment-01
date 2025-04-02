@@ -1,30 +1,38 @@
 package pcd.ass01;
 
-public class CycleBarrierImpl extends BarrierImpl {
+public class CycleBarrierImpl implements CycleBarrier {
+    private final int parties;
+    private int count;
     private int generation;
 
     public CycleBarrierImpl(int parties) {
-        super(parties);
+        this.parties = parties;
         this.generation = 0;
-        this.count = parties;
+        this.count = 0;
     }
 
     @Override
     public synchronized void await() {
-        var gen = generation;
-        count--;
-        if (count != 0) {
-            while (gen == generation) {
+        int currentGeneration = generation;
+        count++;
+        if (count == parties) {
+            generation++;
+            count = 0;
+            notifyAll();
+        } else {
+            while (currentGeneration == generation) {
                 try {
                     wait();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
-        } else {
-            count = parties;
-            generation++;
-            notifyAll();
         }
     }
+
+    @Override
+    public synchronized boolean isBrokening() {
+        return count == (parties - 1);
+    }
+
 }
