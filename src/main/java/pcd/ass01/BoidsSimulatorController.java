@@ -47,7 +47,7 @@ public class BoidsSimulatorController {
         while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    t0 = System.currentTimeMillis();
+                    updateTime0();
                     try {
                         pool.invokeAll(calculateVelocityTaskList);
                     } catch (Exception e) {
@@ -62,12 +62,12 @@ public class BoidsSimulatorController {
                                 pool.invokeAll(updatePositionTaskList);
                             } catch (Exception e) {
                                 throw new RuntimeException(e);
+                            } finally {
+                                view.get().update(framerate);
+                                updateFrameRate(t0);
                             }
                         }
                     }
-
-                    view.get().update(framerate);
-                    updateFrameRate(t0);
                 }
                 if (view.get().isResetButtonPressed()) {
                     model.resetBoids(view.get().getNumberOfBoids());
