@@ -40,13 +40,13 @@ public class CycleBarrierImpl implements CycleBarrier {
     }
 
     public boolean isBrokening() {
-        var isBroking = false;
+        var isBrokening = false;
         mutex.lock();
         if (count == (parties - 1)) {
-            isBroking = true;
+            isBrokening = true;
         }
         mutex.unlock();
-        return isBroking;
+        return isBrokening;
     }
 
 }

@@ -16,9 +16,9 @@ public class Monitor {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             } finally {
+                mutex.unlock();
             }
         }
-        mutex.unlock();
     }
 
     public void startWork() {

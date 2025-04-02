@@ -1,5 +1,7 @@
 package pcd.ass01;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class BoidsSimulatorController {
@@ -11,45 +13,53 @@ public class BoidsSimulatorController {
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private long t0;
-    private boolean isTime0Updated = false;
+    private boolean isTime0Updated;
     private volatile boolean loop = true ;
     private Monitor managerMonitor;
-    private CycleBarrier calVelCycleBarrier;
-    private CycleBarrier updVelCycleBarrier;
-    private CycleBarrier updPosCycleBarrier;
+    private CycleBarrier calculateVelocityCycleBarrier;
+    private CycleBarrier updateVelocityCycleBarrier;
+    private CycleBarrier updatePositionCycleBarrier;
+    private List<Thread> virtualThreads;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
-        initTasksAndVirtualThreads();
+        initVirtualThreads();
     }
 
-    private void initTasksAndVirtualThreads() {
+    private void initVirtualThreads() {
+        virtualThreads = new ArrayList<>();
+        isTime0Updated = false;
         var boids = model.getBoids();
-        var boidsSize = boids.size();
+        var boidsNumber = boids.size();
         managerMonitor = new Monitor();
-        calVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updPosCycleBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 is the Main Thread
+        calculateVelocityCycleBarrier = new CycleBarrierImpl(boidsNumber);
+        updateVelocityCycleBarrier = new CycleBarrierImpl(boidsNumber);
+        updatePositionCycleBarrier = new CycleBarrierImpl(boidsNumber + 1); // + 1 is the Main Thread
 
         boids.forEach(boid -> {
             Thread t = Thread.ofVirtual().unstarted(() -> {
                 while (loop) {
                     try {
                         managerMonitor.waitUntilWorkStart();
+                        System.out.println("VEL");
                         boid.calculateVelocity(model);
-                        calVelCycleBarrier.await();
+                        calculateVelocityCycleBarrier.await();
+                        System.out.println("VEL-2");
                         boid.updateVelocity(model);
-                        updVelCycleBarrier.await();
+                        updateVelocityCycleBarrier.await();
+                        System.out.println("POS");
                         boid.updatePosition(model);
-                        updPosCycleBarrier.await();
+                        updatePositionCycleBarrier.await();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             });
-            t.start();
+            virtualThreads.add(t);
         });
+        System.out.println("CREATI: " +  virtualThreads.size());
+        virtualThreads.forEach(Thread::start);
     }
 
     public void attachView(BoidsView view) {
@@ -57,16 +67,15 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (true) {
+        while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
                     managerMonitor.startWork();
                     updateTime0();
-                    if (updPosCycleBarrier.isBrokening()) {
-                        managerMonitor.stopWork();
+                    if (updatePositionCycleBarrier.isBrokening()) {
                         view.get().update(framerate);
                         updateFrameRate(t0);
-                        updPosCycleBarrier.await();
+                        updatePositionCycleBarrier.await();
                     }
                 } else {
                     managerMonitor.stopWork();
@@ -75,7 +84,7 @@ public class BoidsSimulatorController {
                     managerMonitor.stopWork();
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
-                    initTasksAndVirtualThreads();
+                    initVirtualThreads();
                     view.get().setResetButtonUnpressed();
                 }
             }
