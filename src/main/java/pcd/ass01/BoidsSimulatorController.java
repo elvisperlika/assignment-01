@@ -14,48 +14,53 @@ public class BoidsSimulatorController {
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
     private long t0;
-    private boolean isTime0Updated = false;
+    private boolean isTime0Updated;
     private volatile boolean loop = true ;
     private Monitor managerMonitor;
-    private Barrier calVelCycleBarrier;
-    private Barrier updVelCycleBarrier;
-    private Barrier updPosBarrier;
-    private volatile int i = 0;
-    private int N_LOOP = 100;
-    private final List<Long> deltaTimes = new ArrayList<>();
+    private CycleBarrier calculateVelocityCycleBarrier;
+    private CycleBarrier updateVelocityCycleBarrier;
+    private CycleBarrier updatePositionCycleBarrier;
+    private List<Thread> virtualThreads;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
-        initTasksAndVirtualThreads();
+        initVirtualThreads();
     }
 
-    private void initTasksAndVirtualThreads() {
+    private void initVirtualThreads() {
+        virtualThreads = new ArrayList<>();
+        isTime0Updated = false;
         var boids = model.getBoids();
-        var boidsSize = boids.size();
+        var boidsNumber = boids.size();
         managerMonitor = new Monitor();
-        calVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updVelCycleBarrier = new CycleBarrierImpl(boidsSize);
-        updPosBarrier = new CycleBarrierImpl(boidsSize + 1); // + 1 is the Main Thread
+        calculateVelocityCycleBarrier = new CycleBarrierImpl(boidsNumber);
+        updateVelocityCycleBarrier = new CycleBarrierImpl(boidsNumber);
+        updatePositionCycleBarrier = new CycleBarrierImpl(boidsNumber + 1); // + 1 is the Main Thread
 
         boids.forEach(boid -> {
             Thread t = Thread.ofVirtual().unstarted(() -> {
                 while (loop) {
                     try {
                         managerMonitor.waitUntilWorkStart();
+                        System.out.println("CAL");
                         boid.calculateVelocity(model);
-                        calVelCycleBarrier.await();
+                        calculateVelocityCycleBarrier.await();
+                        System.out.println("VEL-2");
                         boid.updateVelocity(model);
-                        updVelCycleBarrier.await();
+                        updateVelocityCycleBarrier.await();
+                        System.out.println("POS");
                         boid.updatePosition(model);
-                        updPosBarrier.await();
+                        updatePositionCycleBarrier.await();
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             });
-            t.start();
+            virtualThreads.add(t);
         });
+        System.out.println("CREATI: " +  virtualThreads.size());
+        virtualThreads.forEach(Thread::start);
     }
 
     public void attachView(BoidsView view) {
@@ -63,30 +68,28 @@ public class BoidsSimulatorController {
     }
 
     public void runSimulation() {
-        while (i < N_LOOP) {
-            updateTime0();
-            managerMonitor.startWork();
-            if (updPosBarrier.isBrokening()) {
-                // view.get().update(framerate);
-                updateFrameRate(t0);
-                i++;
-                updPosBarrier.await();
+        while (loop) {
+            if (view.isPresent()) {
+                if (view.get().isRunning()) {
+                    managerMonitor.startWork();
+                    updateTime0();
+                    if (updatePositionCycleBarrier.isBrokening()) {
+                        view.get().update(framerate);
+                        updateFrameRate(t0);
+                        updatePositionCycleBarrier.await();
+                    }
+                } else {
+                    managerMonitor.stopWork();
+                }
+                if (view.get().isResetButtonPressed()) {
+                    managerMonitor.stopWork();
+                    model.resetBoids(view.get().getNumberOfBoids());
+                    view.get().update(framerate);
+                    initVirtualThreads();
+                    view.get().setResetButtonUnpressed();
+                }
             }
-//            if (view.isPresent()) {
-//                if (view.get().isRunning()) {
-//                } else {
-//                    managerMonitor.stopWork();
-//                }
-//                if (view.get().isResetButtonPressed()) {
-//                    managerMonitor.stopWork();
-//                    model.resetBoids(view.get().getNumberOfBoids());
-//                    initTasksAndVirtualThreads();
-//                    view.get().setResetButtonUnpressed();
-//                }
-//            }
         }
-        System.out.println("Mean Delta Time in ms: " + deltaTimes.stream().mapToLong(a -> a).average().orElse(0.0));
-        System.exit(-1);
     }
 
     private void updateTime0() {
@@ -100,17 +103,16 @@ public class BoidsSimulatorController {
         isTime0Updated = false;
         var t1 = System.currentTimeMillis();
         var dtElapsed = t1 - t0;
-        deltaTimes.add(dtElapsed);
-//        var frameratePeriod = 1000 / FRAMERATE;
-//        if (dtElapsed < frameratePeriod) {
-//            try {
-//                Thread.sleep(frameratePeriod - dtElapsed);
-//            } catch (Exception ex) {
-//                System.out.println(ex);
-//            }
-//            framerate = FRAMERATE;
-//        } else {
-//            framerate = (int) (1000 / dtElapsed);
-//        }
+        var frameratePeriod = 1000 / FRAMERATE;
+        if (dtElapsed < frameratePeriod) {
+            try {
+                Thread.sleep(frameratePeriod - dtElapsed);
+            } catch (Exception ex) {
+                System.out.println(ex);
+            }
+            framerate = FRAMERATE;
+        } else {
+            framerate = (int) (1000 / dtElapsed);
+        }
     }
 }

@@ -1,6 +1,6 @@
 package pcd.ass01;
 
-public interface Barrier {
+public interface CycleBarrier {
 
     void await();
 
