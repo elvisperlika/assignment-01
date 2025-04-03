@@ -42,13 +42,10 @@ public class BoidsSimulatorController {
                 while (loop) {
                     try {
                         managerMonitor.waitUntilWorkStart();
-                        System.out.println("CAL");
                         boid.calculateVelocity(model);
                         calculateVelocityCycleBarrier.await();
-                        System.out.println("VEL-2");
                         boid.updateVelocity(model);
                         updateVelocityCycleBarrier.await();
-                        System.out.println("POS");
                         boid.updatePosition(model);
                         updatePositionCycleBarrier.await();
                     } catch (Exception e) {
@@ -58,7 +55,6 @@ public class BoidsSimulatorController {
             });
             virtualThreads.add(t);
         });
-        System.out.println("CREATI: " +  virtualThreads.size());
         virtualThreads.forEach(Thread::start);
     }
 
