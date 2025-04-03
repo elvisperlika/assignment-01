@@ -4,7 +4,7 @@ import java.awt.*;
 
 public class BoidsSimulation {
 
-	final static int N_BOIDS = 10;
+	final static int N_BOIDS = 1_500;
 
 	final static double SEPARATION_WEIGHT = 1.0;
     final static double ALIGNMENT_WEIGHT = 1.0;

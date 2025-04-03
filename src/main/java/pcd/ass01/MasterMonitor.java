@@ -1,6 +1,6 @@
 package pcd.ass01;
 
-public class Monitor {
+public class MasterMonitor {
     private boolean working = false;
     private boolean isWorkComplete = false;
 
@@ -33,6 +33,11 @@ public class Monitor {
     }
 
     public synchronized boolean isWorkComplete() {
-        return isWorkComplete;
+        var tmp = false;
+        if (isWorkComplete) {
+            tmp = true;
+            isWorkComplete = false;
+        }
+        return tmp;
     }
 }

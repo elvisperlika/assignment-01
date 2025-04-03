@@ -13,7 +13,7 @@ public class BoidsSimulatorController {
     private static final int FRAMERATE = 50;
     private int framerate;
     private final int CORES = Runtime.getRuntime().availableProcessors();
-    private final int N_WORKERS = CORES + 1;
+    private final int N_WORKERS = CORES - 1; // remove the Master
     private long t0;
     private boolean isTime0Updated = false;
     private ForkJoinPool forkJoinPool;
@@ -21,7 +21,7 @@ public class BoidsSimulatorController {
     private List<Callable<Void>> updateVelocityTaskList;
     private List<Callable<Void>> updatePositionTaskList;
     private volatile boolean loop = true ;
-    private Monitor managerMonitor;
+    private MasterMonitor managerMasterMonitor;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
@@ -40,10 +40,10 @@ public class BoidsSimulatorController {
             updatePositionTaskList.add(new Task(boid, model, Boid::updatePosition));
         });
 
-        forkJoinPool = new ForkJoinPool();
-        managerMonitor = new Monitor();
+        forkJoinPool = new ForkJoinPool(N_WORKERS);
+        managerMasterMonitor = new MasterMonitor();
         MasterWorker master = new MasterWorker("Master",
-                managerMonitor,
+                managerMasterMonitor,
                 calculateVelocityTaskList,
                 updateVelocityTaskList,
                 updatePositionTaskList,
@@ -59,9 +59,9 @@ public class BoidsSimulatorController {
         while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
-                    managerMonitor.startWork();
+                    managerMasterMonitor.startWork();
                     updateTime0();
-                    if (managerMonitor.isWorkComplete()) {
+                    if (managerMasterMonitor.isWorkComplete()) {
                         view.get().update(framerate);
                         updateFrameRate(t0);
                     }

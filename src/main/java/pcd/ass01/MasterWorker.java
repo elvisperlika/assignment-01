@@ -6,7 +6,7 @@ import java.util.concurrent.ForkJoinPool;
 
 public class MasterWorker extends Thread {
 
-    private final Monitor managerMonitor;
+    private final MasterMonitor managerMasterMonitor;
     private final List<Callable<Void>> calculateVelocityTaskList;
     private final List<Callable<Void>> updateVelocityTaskList;
     private final List<Callable<Void>> updatePositionTaskList;
@@ -14,13 +14,13 @@ public class MasterWorker extends Thread {
     private boolean isWorkComplete;
 
     public MasterWorker(String name,
-                        Monitor managerMonitor,
+                        MasterMonitor managerMasterMonitor,
                         List<Callable<Void>> calculateVelocityTaskList,
                         List<Callable<Void>> updateVelocityTaskList,
                         List<Callable<Void>> updatePositionTaskList,
                         ForkJoinPool forkJoinPool) {
         super(name);
-        this.managerMonitor = managerMonitor;
+        this.managerMasterMonitor = managerMasterMonitor;
         this.calculateVelocityTaskList = calculateVelocityTaskList;
         this.updateVelocityTaskList = updateVelocityTaskList;
         this.updatePositionTaskList = updatePositionTaskList;
@@ -29,7 +29,7 @@ public class MasterWorker extends Thread {
 
     public void run() {
         while (true) {
-            managerMonitor.waitUntilWorkStart();
+            managerMasterMonitor.waitUntilWorkStart();
             try {
                 forkJoinPool.invokeAll(calculateVelocityTaskList);
             } catch (Exception e) {
@@ -47,7 +47,7 @@ public class MasterWorker extends Thread {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             } finally {
-                managerMonitor.setWorkCompleteAndRest();
+                managerMasterMonitor.setWorkCompleteAndRest();
             }
         }
     }
