@@ -1,7 +1,6 @@
 package pcd.ass01;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.*;
@@ -17,26 +16,39 @@ public class BoidsSimulatorController {
     private final int N_WORKERS = CORES + 1;
     private long t0;
     private boolean isTime0Updated = false;
-    private ForkJoinPool pool;
-    List<Callable<Void>> calculateVelocityTaskList = new ArrayList<>();
-    List<Callable<Void>> updateVelocityTaskList = new ArrayList<>();
-    List<Callable<Void>> updatePositionTaskList = new ArrayList<>();
+    private ForkJoinPool forkJoinPool;
+    private List<Callable<Void>> calculateVelocityTaskList;
+    private List<Callable<Void>> updateVelocityTaskList;
+    private List<Callable<Void>> updatePositionTaskList;
     private volatile boolean loop = true ;
+    private Monitor managerMonitor;
 
     public BoidsSimulatorController(BoidsModel model) {
         this.model = model;
         view = Optional.empty();
-        initTasks();
+        initTasksAndMaster();
     }
 
-    private void initTasks() {
+    private void initTasksAndMaster() {
+        calculateVelocityTaskList = new ArrayList<>();
+        updateVelocityTaskList = new ArrayList<>();
+        updatePositionTaskList = new ArrayList<>();
         var boids = model.getBoids();
-        pool = new ForkJoinPool(N_WORKERS);
         boids.forEach(boid -> {
             calculateVelocityTaskList.add(new Task(boid, model, Boid::calculateVelocity));
             updateVelocityTaskList.add(new Task(boid, model, Boid::updateVelocity));
             updatePositionTaskList.add(new Task(boid, model, Boid::updatePosition));
         });
+
+        forkJoinPool = new ForkJoinPool();
+        managerMonitor = new Monitor();
+        MasterWorker master = new MasterWorker("Master",
+                managerMonitor,
+                calculateVelocityTaskList,
+                updateVelocityTaskList,
+                updatePositionTaskList,
+                forkJoinPool);
+        master.start();
     }
 
     public void attachView(BoidsView view) {
@@ -47,32 +59,18 @@ public class BoidsSimulatorController {
         while (loop) {
             if (view.isPresent()) {
                 if (view.get().isRunning()) {
+                    managerMonitor.startWork();
                     updateTime0();
-                    try {
-                        pool.invokeAll(calculateVelocityTaskList);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    } finally {
-                        try {
-                            pool.invokeAll(updateVelocityTaskList);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            try {
-                                pool.invokeAll(updatePositionTaskList);
-                            } catch (Exception e) {
-                                throw new RuntimeException(e);
-                            } finally {
-                                view.get().update(framerate);
-                                updateFrameRate(t0);
-                            }
-                        }
+                    if (managerMonitor.isWorkComplete()) {
+                        view.get().update(framerate);
+                        updateFrameRate(t0);
                     }
                 }
                 if (view.get().isResetButtonPressed()) {
+                    forkJoinPool.shutdownNow();
                     model.resetBoids(view.get().getNumberOfBoids());
                     view.get().update(framerate);
-                    initTasks();
+                    initTasksAndMaster();
                     view.get().setResetButtonUnpressed();
                 }
             }
