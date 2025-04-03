@@ -11,7 +11,6 @@ public class MasterWorker extends Thread {
     private final List<Callable<Void>> updateVelocityTaskList;
     private final List<Callable<Void>> updatePositionTaskList;
     private final ForkJoinPool forkJoinPool;
-    private boolean isWorkComplete;
 
     public MasterWorker(String name,
                         Monitor managerMonitor,

@@ -16,11 +16,6 @@ public class BoidsSimulation {
     static final double PERCEPTION_RADIUS = 50.0;
     static final double AVOID_RADIUS = 20.0;
 
-	static final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-	final static int SCREEN_WIDTH = 1400;
-	final static int SCREEN_HEIGHT = 600;
-	
-
     public static void main(String[] args) {      
     	var model = new BoidsModel(
     					N_BOIDS, 
@@ -31,8 +26,6 @@ public class BoidsSimulation {
     					AVOID_RADIUS);
 		var t0 = System.currentTimeMillis();
     	var sim = new BoidsSimulatorController(model);
-    	// var view = new BoidsView(model, SCREEN_WIDTH, SCREEN_HEIGHT, N_BOIDS);
-    	// sim.attachView(view);
     	sim.runSimulation();
 		var t1 = System.currentTimeMillis();
 		System.out.println("DT: " + (t1 - t0));

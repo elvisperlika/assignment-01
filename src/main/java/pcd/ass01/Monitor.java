@@ -33,6 +33,11 @@ public class Monitor {
     }
 
     public synchronized boolean isWorkComplete() {
-        return isWorkComplete;
+        var tmp = false;
+        if (isWorkComplete) {
+            tmp = true;
+            isWorkComplete = false;
+        }
+        return tmp;
     }
 }
